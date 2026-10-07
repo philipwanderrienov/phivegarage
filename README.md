@@ -71,9 +71,10 @@ Akses lokal: `http://localhost:8090`; Compose bind ke localhost. Untuk akses pub
 
 - `sql/000_database.sql`: role/database, dijalankan sebagai admin. Ganti password placeholder.
 - `sql/001_schema.sql`: DDL awal yang sama dengan migration V1.
+- `sql/003_won_units.sql`: migration V3, unit dimenangkan, pengeluaran per unit, serta dana awal.
 - `sql/002_auction_houses.sql`: migration V2, tabel balai lelang + referensi dan snapshot tarif katalog. Flyway menjalankannya otomatis, termasuk untuk instalasi V1 yang sudah ada.
 
-Jika benar-benar memasang DDL secara manual pada DB baru, jalankan script 001 lalu 002 sekali sesuai urutan, lalu baseline Flyway versi 2 dengan CLI Flyway sebelum backend pertama kali dinyalakan. Jalur paling sederhana tetap membiarkan aplikasi menjalankan migration V1 sendiri. Jangan menyalakan `baseline-on-migrate` pada database yang belum diperiksa.
+Jika benar-benar memasang DDL secara manual pada DB baru, jalankan script 001, 002, lalu 003 sekali sesuai urutan, lalu baseline Flyway versi 3 dengan CLI Flyway sebelum backend pertama kali dinyalakan. Jalur paling sederhana tetap membiarkan aplikasi menjalankan migration V1 sendiri. Jangan menyalakan `baseline-on-migrate` pada database yang belum diperiksa.
 
 ## Bagaimana angka dihitung
 
@@ -131,7 +132,7 @@ mvn -f backend/pom.xml verify
 cd frontend && npm run build
 ```
 
-Selama server maintenance, pengujian dan build dilakukan secara lokal. Setelah server siap, pengujian integrasi dilakukan langsung di server. GitHub digunakan untuk menyimpan source dan riwayat perubahan; tidak ada workflow GitHub Actions. 31 test mencakup budget cap, fee persentase, rounding, deal yang tidak mungkin, gate verifikasi/pembanding/risiko servis, validasi structured output AI, PDF valid/rusak/password, dan rekonsiliasi rincian biaya, tarif JBA, batas bid user dan prefilter STNK/modal. Panduan smoke test: `docs/SMOKE_TEST.md`.
+Selama server maintenance, pengujian dan build dilakukan secara lokal. Setelah server siap, pengujian integrasi dilakukan langsung di server. GitHub digunakan untuk menyimpan source dan riwayat perubahan; tidak ada workflow GitHub Actions. 40 test mencakup budget cap, fee persentase, rounding, deal yang tidak mungkin, gate verifikasi/pembanding/risiko servis, validasi structured output AI, PDF valid/rusak/password, dan rekonsiliasi rincian biaya, tarif JBA, batas bid user dan prefilter STNK/modal. Panduan smoke test: `docs/SMOKE_TEST.md`.
 
 API references: [OpenAI PDF](https://developers.openai.com/api/docs/guides/file-inputs), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 
@@ -152,3 +153,28 @@ Tarif katalog disimpan sebagai snapshot saat upload, sehingga edit master balai 
 ALL IN lelang = bid + admin tetap + ceil(bid × pajak lelang / 100). Contoh JBA bid 50 juta => admin 3 juta + pajak 550 ribu => ALL IN lelang 53,55 juta. ALL IN lelang belum termasuk servis, pajak kendaraan/balik nama, transport dan cadangan risiko; biaya tersebut masuk **total modal usaha**.
 
 Katalog legacy JBA dihubungkan ke seed tarif JBA pada migration V2. Katalog legacy balai lain tetap tanpa tarif sampai user memilih balai yang sudah dikonfigurasi. Tidak ada tarif balai lain yang ditebak. Field `maxBid` wajib diisi untuk analisis baru; fee input client tidak dapat mengganti tarif snapshot katalog, dan STNK ADA tetap wajib meskipun client mengirim requireStnk=false.
+
+
+## Unit dimenangkan (Board & Simulation)
+
+Menu **Unit dimenangkan** mengikuti kolom dan rumus spreadsheet referensi PHIVE Garage. Tambahkan unit manual dengan memilih balai, atau klik **Catat menang** pada lot katalog; isi harga menang aktual. Tidak ada impor otomatis data pribadi dari spreadsheet.
+
+| Perhitungan | Rumus |
+| --- | --- |
+| Modal maksimal / menang ideal | Bid ideal + admin + pajak bid ideal |
+| Modal real / ALL IN lelang | Harga menang aktual + admin + pajak harga menang aktual |
+| Perbaikan + penggunaan | Jumlah seluruh baris pengeluaran unit |
+| Harga akhir ALL IN | Modal real + perbaikan/penggunaan |
+| Margin harapan | Harga iklan / target jual − harga akhir ALL IN |
+| Margin real | Harga deal jual − harga akhir ALL IN |
+| Dana sesuai rumus sheet | Dana awal + akumulasi margin real seluruh unit terjual |
+
+Pajak lelang dibulatkan ke atas ke rupiah penuh, sama dengan perhitungan bid. Median pasar dicatat sebagai referensi; target dan deal merupakan input user. Harga deal dan tanggal terjual wajib diisi bersama; margin real kosong sebelum terjual. Laba negatif tetap dicatat sebagai kerugian.
+
+Dana bukan saldo kas bank: modal unit belum terjual ditampilkan terpisah dan tidak dikurangkan dari rumus Dana. Isi dana awal pada menu ini. Dana awal berlaku untuk seluruh garasi; setiap unit terjual menyumbang margin realnya satu kali berdasarkan record unit, bukan setiap kali record diedit.
+
+Pengeluaran mendukung tambah, edit, hapus: tanggal, kategori (bebas, tersedia saran servis/BBM/dokumen/tol/cuci/iklan), catatan, nominal rupiah positif. ALL IN dan margin dihitung ulang dari rincian aktual. Hapus unit juga menghapus pengeluarannya.
+
+Tarif balai dibekukan pada unit. Unit dari PDF memakai snapshot tarif katalog, unit manual memakai tarif aktif saat pencatatan. Balai dan sumber tidak dapat diubah setelah disimpan. Satu lot katalog hanya boleh dicatat menang sekali. Balai dan lot yang dirujuk unit dimenangkan tidak dapat dihapus. Perhitungan ini berjalan di Java dan tidak memanggil AI.
+
+API: `/api/won-units` (GET/POST), `/{id}` (GET/PUT/DELETE), `/{id}/expenses` (POST), `/{id}/expenses/{expenseId}` (PUT/DELETE), `/funds` (GET/PUT). Seluruh endpoint memakai autentikasi aplikasi yang sama.

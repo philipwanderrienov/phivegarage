@@ -40,6 +40,6 @@ class HouseApi {
  @PostMapping Object create(@Valid @RequestBody AuctionHouses.Input input){UUID id=UUID.randomUUID();store.db.update("INSERT INTO auction_houses(id,name,admin_fee,tax_percent,active) VALUES(?,?,?,?,?)",id,input.name().trim(),input.adminFee(),input.taxPercent(),input.active());return Map.of("id",id);}
  @PutMapping("/{id}") Object update(@PathVariable UUID id,@Valid @RequestBody AuctionHouses.Input input){store.one("SELECT id FROM auction_houses WHERE id=?",id);store.db.update("UPDATE auction_houses SET name=?,admin_fee=?,tax_percent=?,active=?,updated_at=now() WHERE id=?",input.name().trim(),input.adminFee(),input.taxPercent(),input.active(),id);return Map.of("saved",true);}
  @DeleteMapping("/{id}") Object delete(@PathVariable UUID id){store.one("SELECT id FROM auction_houses WHERE id=?",id);
-  try{store.db.update("DELETE FROM auction_houses WHERE id=?",id);}catch(org.springframework.dao.DataIntegrityViolationException e){throw new ResponseStatusException(HttpStatus.CONFLICT,"Balai sudah dipakai katalog. Nonaktifkan balai agar histori tetap tersedia.");}return Map.of("deleted",true);
+  try{store.db.update("DELETE FROM auction_houses WHERE id=?",id);}catch(org.springframework.dao.DataIntegrityViolationException e){throw new ResponseStatusException(HttpStatus.CONFLICT,"Balai sudah dipakai katalog atau unit dimenangkan. Nonaktifkan balai agar histori tetap tersedia.");}return Map.of("deleted",true);
  }
 }
