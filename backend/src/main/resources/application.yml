@@ -1,0 +1,19 @@
+server:
+  port: ${PORT:8080}
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/phivegarage}
+    username: ${DATABASE_USER:phivegarage}
+    password: ${DATABASE_PASSWORD}
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+  flyway:
+    enabled: true
+app:
+  username: ${APP_USERNAME:admin}
+  password: ${APP_PASSWORD}
+  storage: ${STORAGE_PATH:./data}
+  ai-key: ${OPENAI_API_KEY:}
+  ai-model: ${OPENAI_MODEL:gpt-4.1-mini}

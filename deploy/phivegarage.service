@@ -1,0 +1,14 @@
+[Unit]
+Description=PhiveGarage Java API
+After=network-online.target postgresql.service
+[Service]
+User=phivegarage
+WorkingDirectory=/opt/phivegarage
+EnvironmentFile=/opt/phivegarage/.env
+ExecStart=/usr/bin/java -jar /opt/phivegarage/backend/target/phivegarage-0.1.0.jar
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target
