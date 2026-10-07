@@ -18,3 +18,8 @@ Live AI membutuhkan OPENAI_API_KEY milik operator, panggilan berbayar. Tidak ada
 13. PDF password/rusak harus ditolak dengan pesan yang menjelaskan tindakan. Untuk katalog berstatus FAILED, tombol Coba ulang ekstraksi menggunakan PDF yang sudah tersimpan; retry memanggil AI lagi. Retry pada READY/EXTRACTING harus ditolak 409.
 14. Buka detail unit: jumlah servis + pajak + transport/global + biaya lot + risiko + biaya lelang + harga dasar harus sama dengan total modal. Total pada max bid dan profit pada max bid harus sesuai hasil backend.
 15. Tahun/KM yang belum terbaca harus menghasilkan REVIEW. Tahun/KM yang diketahui melanggar filter menghasilkan SKIP.
+
+16. Menu Balai lelang: tambah/edit/hapus balai yang belum dipakai, nonaktifkan balai yang sudah dipakai. Nama duplikat ditolak. Upload hanya memilih balai aktif.
+17. JBA pada bid 50 juta: admin 3 juta, pajak 550 ribu, ALL IN lelang 53,55 juta. Bandingkan preview backend dan kolom lot.
+18. Edit master tarif: katalog lama harus tetap memakai snapshot lama sampai tombol Terapkan tarif diklik. Riwayat analisis harus tetap memakai biaya lama.
+19. Input maksimum bid di bawah harga dasar: unit SKIP tanpa AI. STNK UNKNOWN/TIDAK_ADA/null juga SKIP tanpa AI, meskipun client mencoba menonaktifkan requireStnk. Lihat jumlah aiAnalyzedLots/filteredLots pada usage hasil.

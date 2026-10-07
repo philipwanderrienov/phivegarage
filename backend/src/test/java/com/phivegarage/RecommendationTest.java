@@ -14,7 +14,7 @@ class RecommendationTest {
  ObjectMapper json=new ObjectMapper();Jobs jobs;
  @BeforeEach void setup()throws Exception{jobs=new Jobs(null,null,json,null,dir.toString());}
  @AfterEach void close(){jobs.close();}
- Criteria criteria(){return new Criteria(65_000_000,65_000_000,5_000_000,2_000_000,BigDecimal.ZERO,3_000_000,2_000_000,1_000_000,2_000_000,2012,150000,"ALL","RETAIL","FAST",true,true,"");}
+ Criteria criteria(){return new Criteria(65_000_000,65_000_000,65_000_000,5_000_000,2_000_000,BigDecimal.ZERO,3_000_000,2_000_000,1_000_000,2_000_000,2012,150000,"ALL","RETAIL","FAST",true,true,"");}
  Assessment assessment(){return new Assessment("id",90,90,80,1_000_000,100_000_000L,7,21,List.of("Test"),List.of());}
  Map<String,Object> lot(boolean verified,long base,List<ComparablePrice> comps){
   var d=new LotData("001","Test Car",2016,"MT",80000L,base,"ADA","ADA",null,"",1,"Test source",comps,null,null,null);
@@ -48,4 +48,11 @@ class RecommendationTest {
   assertEquals(c.totalAtMaxBid(),result.maxBid()+c.nonBidCosts()+c.auctionFeeAtMaxBid());
   assertEquals(c.profitAtMaxBid(),result.sellPrice()-c.totalAtMaxBid());
  }
+ @Test void onlyExplicitAdaStnkPassesPreFilter()throws Exception{
+  for(String state:List.of("TIDAK_ADA","UNKNOWN")){var row=lot(true,50_000_000,comps());((com.fasterxml.jackson.databind.node.ObjectNode)row.get("data")).put("stnk",state);var d=json.treeToValue((com.fasterxml.jackson.databind.JsonNode)row.get("data"),LotData.class);assertFalse(Jobs.passesPreFilter(d,criteria()));assertEquals("SKIP",jobs.evaluate(row,criteria(),null).recommendation());}
+ }
+ @Test void nullStnkDoesNotPassPreFilter()throws Exception{var row=lot(true,50_000_000,comps());((com.fasterxml.jackson.databind.node.ObjectNode)row.get("data")).putNull("stnk");assertFalse(Jobs.passesPreFilter(json.treeToValue((com.fasterxml.jackson.databind.JsonNode)row.get("data"),LotData.class),criteria()));}
+ @Test void userBidCeilingCapsCalculatedBid()throws Exception{var n=(com.fasterxml.jackson.databind.node.ObjectNode)json.valueToTree(criteria());n.put("maxBid",52_000_000);var c=json.treeToValue(n,Criteria.class);assertEquals(52_000_000L,jobs.evaluate(lot(true,50_000_000,comps()),c,assessment()).maxBid());}
+ @Test void baseAboveUserCeilingIsNotSentToAi()throws Exception{var n=(com.fasterxml.jackson.databind.node.ObjectNode)json.valueToTree(criteria());n.put("maxBid",49_000_000);var c=json.treeToValue(n,Criteria.class);var row=lot(true,50_000_000,comps());assertFalse(Jobs.passesPreFilter(json.treeToValue((com.fasterxml.jackson.databind.JsonNode)row.get("data"),LotData.class),c));var result=jobs.evaluate(row,c,null);assertEquals("SKIP",result.recommendation());assertNull(result.ai());}
+ @Test void budgetImpossibleUnitDoesNotPassPreFilter()throws Exception{var row=lot(true,64_000_000,comps());assertFalse(Jobs.passesPreFilter(json.treeToValue((com.fasterxml.jackson.databind.JsonNode)row.get("data"),LotData.class),criteria()));}
 }
