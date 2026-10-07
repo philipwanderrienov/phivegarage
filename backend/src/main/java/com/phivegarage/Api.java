@@ -31,7 +31,7 @@ public class Api {
  @GetMapping("/catalogs/{id}") public Object catalog(@PathVariable UUID id){return store.one("SELECT id,name,house,status,progress,pages,error,created_at FROM catalogs WHERE id=?",id);}
  @GetMapping("/catalogs/{id}/pdf") public ResponseEntity<FileSystemResource> pdf(@PathVariable UUID id){var c=store.one("SELECT file_path FROM catalogs WHERE id=?",id);return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).header("Content-Disposition","inline; filename=catalog.pdf").body(new FileSystemResource(jobs.storage.resolve(c.get("file_path").toString())));}
  @GetMapping("/catalogs/{id}/lots") public Object lots(@PathVariable UUID id){store.one("SELECT id FROM catalogs WHERE id=?",id);return store.list("SELECT * FROM lots WHERE catalog_id=? ORDER BY lot_number",id);}
- public record EditLot(@Valid LotData data,boolean verified){}
+ public record EditLot(@jakarta.validation.constraints.NotNull @Valid LotData data,boolean verified){}
  @PutMapping("/lots/{id}") public Object edit(@PathVariable UUID id,@Valid @RequestBody EditLot body){
   var lot=store.one("SELECT l.id,c.pages,c.id AS catalog_id FROM lots l JOIN catalogs c ON c.id=l.catalog_id WHERE l.id=?",id);
   int active=store.db.queryForObject("SELECT count(*) FROM analyses WHERE catalog_id=? AND status IN ('QUEUED','PROCESSING')",Integer.class,lot.get("catalog_id"));

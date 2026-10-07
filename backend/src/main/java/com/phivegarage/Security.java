@@ -21,7 +21,7 @@ public class Security {
    .authorizeHttpRequests(a->a.requestMatchers("/api/health").permitAll().anyRequest().authenticated())
    .addFilterBefore(new org.springframework.web.filter.OncePerRequestFilter(){
     @Override protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest request,jakarta.servlet.http.HttpServletResponse response,jakarta.servlet.FilterChain chain) throws java.io.IOException,jakarta.servlet.ServletException {
-     if(!request.getRequestURI().equals("/api/health") && !"web".equals(request.getHeader("X-PhiveGarage"))){response.sendError(403,"X-PhiveGarage header required");return;}
+     if(request.getHeader("Authorization")!=null && !request.getRequestURI().equals("/api/health") && !"web".equals(request.getHeader("X-PhiveGarage"))){response.sendError(403,"X-PhiveGarage header required");return;}
      chain.doFilter(request,response);
     }
    },org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class)

@@ -6,10 +6,10 @@ public final class Models {
   Long basePrice,String stnk,String bpkb,String taxExpiry,String notes,Integer sourcePage,String sourceQuote,
   List<ComparablePrice> comparables,Long repairCost,Long taxCost,Long otherCost) {}
  public record ComparablePrice(@NotBlank String url,@Positive long price,@NotBlank String observedDate,String notes) {}
- public record Criteria(@Positive long capital,@Positive long maxPerUnit,@PositiveOrZero long targetProfit,
-  @PositiveOrZero long auctionFee,@NotNull @DecimalMin("0") @DecimalMax("100") java.math.BigDecimal auctionFeePercent,
-  @PositiveOrZero long repairBuffer,@PositiveOrZero long taxBuffer,@PositiveOrZero long otherCosts,
-  @PositiveOrZero long riskBuffer,@Min(1950) @Max(2100) int minYear,@Positive long maxKilometer,
+ public record Criteria(@Positive @Max(100000000000L) long capital,@Positive @Max(100000000000L) long maxPerUnit,@PositiveOrZero @Max(100000000000L) long targetProfit,
+  @PositiveOrZero @Max(100000000000L) long auctionFee,@NotNull @DecimalMin("0") @DecimalMax("100") java.math.BigDecimal auctionFeePercent,
+  @PositiveOrZero @Max(100000000000L) long repairBuffer,@PositiveOrZero @Max(100000000000L) long taxBuffer,@PositiveOrZero @Max(100000000000L) long otherCosts,
+  @PositiveOrZero @Max(100000000000L) long riskBuffer,@Min(1950) @Max(2100) int minYear,@Positive long maxKilometer,
   @NotNull @Pattern(regexp="ALL|MT|AT") String transmission,@NotNull @Pattern(regexp="RETAIL|DEALER") String buyer,
   @NotNull @Pattern(regexp="FAST|BALANCED|MARGIN") String strategy,boolean requireStnk,boolean requireBpkb,
   @Size(max=3000) String instructions) {}

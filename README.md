@@ -122,6 +122,6 @@ mvn -f backend/pom.xml verify
 cd frontend && npm run build
 ```
 
-GitHub Actions menjalankan test/build backend dan build Vue pada setiap push/PR. Test calculator mencakup budget cap, fee persentase, rounding, dan deal yang tidak mungkin. Panduan smoke test: `docs/SMOKE_TEST.md`.
+GitHub Actions menjalankan test/build backend dan build Vue pada setiap push/PR. 9 test mencakup budget cap, fee persentase, rounding, deal yang tidak mungkin, serta gate verifikasi/pembanding/risiko servis. Panduan smoke test: `docs/SMOKE_TEST.md`.
 
 API references: [OpenAI PDF](https://developers.openai.com/api/docs/guides/file-inputs), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
