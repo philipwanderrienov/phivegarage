@@ -15,6 +15,8 @@ public final class Models {
   @Size(max=3000) String instructions) {}
  public record Assessment(String lotId,int demandScore,int liquidityScore,int conditionScore,long repairEstimate,
   Long indicativeSellPrice,Integer daysMin,Integer daysMax,List<String> reasons,List<String> risks) {}
+ public record CostBreakdown(long repair,long tax,long globalOther,long lotOther,long riskBuffer,long nonBidCosts,
+  long auctionFixedFee,java.math.BigDecimal auctionFeePercent,Long auctionFeeAtBase,Long auctionFeeAtMaxBid,Long totalAtMaxBid,Long profitAtMaxBid) {}
  public record Result(String lotId,String lotNumber,String vehicle,String recommendation,int score,
-  Long basePrice,Long sellPrice,Long maxBid,Long totalCost,Long profit,List<String> blockers,Assessment ai,boolean watchlisted) {}
+  Long basePrice,Long sellPrice,Long maxBid,Long totalCost,Long profit,List<String> blockers,Assessment ai,CostBreakdown costs,boolean watchlisted) {}
 }

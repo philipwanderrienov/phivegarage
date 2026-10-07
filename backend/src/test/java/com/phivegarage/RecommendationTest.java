@@ -37,4 +37,15 @@ class RecommendationTest {
   var a=new Assessment("id",90,90,50,15_000_000,100_000_000L,7,21,List.of(),List.of("Indikasi perbaikan besar"));
   var r=jobs.evaluate(lot(true,50_000_000,comps()),criteria(),a);assertEquals(43_000_000L,r.maxBid());assertEquals("SKIP",r.recommendation());
  }
+ @Test void missingFactsRequireReviewRatherThanSkip()throws Exception{
+  var row=new HashMap<String,Object>(lot(true,50_000_000,comps()));
+  ((com.fasterxml.jackson.databind.node.ObjectNode)row.get("data")).putNull("year").putNull("kilometer");
+  var result=jobs.evaluate(row,criteria(),assessment());assertEquals("REVIEW",result.recommendation());
+ }
+ @Test void costBreakdownReconcilesAtBaseAndMax()throws Exception{
+  var result=jobs.evaluate(lot(true,50_000_000,comps()),criteria(),assessment());var c=result.costs();
+  assertEquals(result.totalCost(),result.basePrice()+c.nonBidCosts()+c.auctionFeeAtBase());
+  assertEquals(c.totalAtMaxBid(),result.maxBid()+c.nonBidCosts()+c.auctionFeeAtMaxBid());
+  assertEquals(c.profitAtMaxBid(),result.sellPrice()-c.totalAtMaxBid());
+ }
 }

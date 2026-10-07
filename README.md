@@ -5,11 +5,12 @@ Aplikasi pribadi untuk menyeleksi mobil dari katalog lelang PDF. **Java 17 / Spr
 ## Fitur MVP
 
 - Upload katalog PDF teks/scan, diproses asynchronous per 3 halaman (20 MB, maksimal 150 halaman).
+- Coba ulang ekstraksi katalog gagal tanpa upload ulang; PDF rusak/password memberikan pesan tindakan.
 - Ekstraksi lot dengan halaman dan kutipan sumber; unknown disimpan null. Katalog asli disimpan di disk server.
 - Editor lot: koreksi spesifikasi, surat-surat, biaya aktual, pembanding harga, dan konfirmasi verifikasi.
 - Parameter modal, target laba, biaya lelang tetap/persentase, pajak, servis, transport, cadangan risiko, tahun, KM, transmisi, target pembeli, strategi, instruksi tambahan.
 - AI menilai demand, likuiditas dan indikasi risiko. Java menghitung biaya, laba, max bid; hasil tersimpan sebagai snapshot.
-- Ranking BID / REVIEW / SKIP, detail alasan, bid board, riwayat analisis, re-analysis, export JSON.
+- Ranking BID / REVIEW / SKIP, rincian biaya dan profit pada harga dasar/max bid, detail alasan, bid board, riwayat analisis, re-analysis, export JSON.
 - Login satu akun private workspace; API key hanya di server. Dashboard penggunaan token untuk analisis terpilih.
 
 ## Jalankan di server tanpa Docker
@@ -92,7 +93,7 @@ BID membutuhkan verifikasi, pembanding harga, tahun/KM/filter/surat yang terpenu
 
 Tanpa API key, login dan daftar katalog tetap berfungsi; ekstraksi/analisis membutuhkan key berkuota. Model availability bergantung pada akun. Tidak ada API key atau data katalog nyata di repository.
 
-Penggunaan token yang ditampilkan adalah panggilan analisis yang berhasil; ekstraksi dan panggilan gagal belum diakumulasi. Estimasi USD membutuhkan tarif input/output yang diisi user. Pantau biaya aktual di provider. Antrean satu worker, maksimal 10 pekerjaan menunggu. Pekerjaan yang terhenti saat restart ditandai FAILED; upload ulang atau analisis ulang.
+Penggunaan token yang ditampilkan adalah panggilan analisis yang berhasil; ekstraksi dan panggilan gagal belum diakumulasi. Estimasi USD membutuhkan tarif input/output yang diisi user. Pantau biaya aktual di provider. Antrean satu worker, maksimal 10 pekerjaan menunggu. Pekerjaan yang terhenti saat restart ditandai FAILED; coba ulang ekstraksi dari katalog tersimpan atau analisis ulang.
 
 MVP satu pengguna, satu instance backend. Belum SaaS/multi-tenant, belum pengambilan harga pasar otomatis, belum histori transaksi/feedback model. Foto PDF hanya dipakai dalam tahap ekstraksi; belum ada galeri foto atau analisis visual khusus per unit. Tidak dapat memastikan banjir/tabrak/kondisi mesin dari PDF; lakukan inspeksi langsung. Data extraction dapat melewatkan/keliru membaca lot: cocokkan jumlah unit dengan PDF sebelum bidding.
 
@@ -107,6 +108,7 @@ Semua endpoint kecuali health membutuhkan HTTP Basic + header `X-PhiveGarage: we
 | GET /api/catalogs | Daftar katalog |
 | POST /api/catalogs | Multipart `file`, `house` |
 | GET /api/catalogs/{id} | Status ekstraksi |
+| POST /api/catalogs/{id}/retry | Coba ulang katalog FAILED (menggunakan kuota AI lagi) |
 | GET /api/catalogs/{id}/pdf | PDF sumber |
 | GET /api/catalogs/{id}/lots | Lot terstruktur |
 | PUT /api/lots/{id} | `{data, verified}` |
@@ -122,7 +124,7 @@ mvn -f backend/pom.xml verify
 cd frontend && npm run build
 ```
 
-Selama development, pengujian dan build dilakukan langsung di server. GitHub digunakan untuk menyimpan source dan riwayat perubahan; tidak ada workflow GitHub Actions. 9 test mencakup budget cap, fee persentase, rounding, deal yang tidak mungkin, serta gate verifikasi/pembanding/risiko servis. Panduan smoke test: `docs/SMOKE_TEST.md`.
+Selama server maintenance, pengujian dan build dilakukan secara lokal. Setelah server siap, pengujian integrasi dilakukan langsung di server. GitHub digunakan untuk menyimpan source dan riwayat perubahan; tidak ada workflow GitHub Actions. 22 test mencakup budget cap, fee persentase, rounding, deal yang tidak mungkin, gate verifikasi/pembanding/risiko servis, validasi structured output AI, PDF valid/rusak/password, dan rekonsiliasi rincian biaya. Panduan smoke test: `docs/SMOKE_TEST.md`.
 
 API references: [OpenAI PDF](https://developers.openai.com/api/docs/guides/file-inputs), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 

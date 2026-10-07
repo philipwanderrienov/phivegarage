@@ -20,12 +20,20 @@ public class Api {
  @PostMapping("/catalogs") public Object upload(@RequestPart MultipartFile file,@RequestParam(defaultValue="Lelang") String house)throws Exception{
   if(!ai.enabled())throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"OPENAI_API_KEY belum dikonfigurasi");
   if(file.isEmpty()||file.getSize()>20*1024*1024)throw new IllegalArgumentException("PDF maksimal 20 MB");
-  byte[] bytes=file.getBytes();if(bytes.length<5||!new String(bytes,0,5,java.nio.charset.StandardCharsets.US_ASCII).equals("%PDF-"))throw new IllegalArgumentException("File harus PDF valid");
-  try(var doc=Loader.loadPDF(bytes)){if(doc.isEncrypted()||doc.getNumberOfPages()==0||doc.getNumberOfPages()>150)throw new IllegalArgumentException("PDF tidak boleh terenkripsi dan maksimal 150 halaman");}
+  byte[] bytes=file.getBytes();PdfFiles.validate(bytes);
   UUID id=UUID.randomUUID();String path=id+".pdf";Files.write(jobs.storage.resolve(path),bytes);
   String name=Optional.ofNullable(file.getOriginalFilename()).orElse("catalog.pdf");
   store.db.update("INSERT INTO catalogs(id,name,house,file_path,status) VALUES(?,?,?,?,'QUEUED')",id,name,house,path);
   try{jobs.submit(()->jobs.extract(id));}catch(Exception e){store.db.update("DELETE FROM catalogs WHERE id=?",id);Files.deleteIfExists(jobs.storage.resolve(path));throw e;}
+  return Map.of("id",id);
+ }
+ @PostMapping("/catalogs/{id}/retry") public Object retry(@PathVariable UUID id){
+  if(!ai.enabled())throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"OPENAI_API_KEY belum dikonfigurasi");
+  var catalog=store.one("SELECT file_path,status FROM catalogs WHERE id=?",id);
+  if(!Files.isRegularFile(jobs.storage.resolve(catalog.get("file_path").toString())))throw new ResponseStatusException(HttpStatus.CONFLICT,"PDF sumber tidak ditemukan. Upload ulang katalog.");
+  int claimed=store.db.update("UPDATE catalogs SET status='QUEUED',progress=0,error=NULL WHERE id=? AND status='FAILED'",id);
+  if(claimed!=1)throw new ResponseStatusException(HttpStatus.CONFLICT,"Hanya katalog gagal yang dapat dicoba ulang");
+  try{jobs.submit(()->jobs.extract(id));}catch(Exception e){store.db.update("UPDATE catalogs SET status='FAILED',error='Antrean penuh; coba kembali nanti.' WHERE id=?",id);throw e;}
   return Map.of("id",id);
  }
  @GetMapping("/catalogs/{id}") public Object catalog(@PathVariable UUID id){return store.one("SELECT id,name,house,status,progress,pages,error,created_at FROM catalogs WHERE id=?",id);}
