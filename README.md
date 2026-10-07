@@ -122,6 +122,16 @@ mvn -f backend/pom.xml verify
 cd frontend && npm run build
 ```
 
-GitHub Actions menjalankan test/build backend dan build Vue pada setiap push/PR. 9 test mencakup budget cap, fee persentase, rounding, deal yang tidak mungkin, serta gate verifikasi/pembanding/risiko servis. Panduan smoke test: `docs/SMOKE_TEST.md`.
+Selama development, pengujian dan build dilakukan langsung di server. GitHub digunakan untuk menyimpan source dan riwayat perubahan; tidak ada workflow GitHub Actions. 9 test mencakup budget cap, fee persentase, rounding, deal yang tidak mungkin, serta gate verifikasi/pembanding/risiko servis. Panduan smoke test: `docs/SMOKE_TEST.md`.
 
 API references: [OpenAI PDF](https://developers.openai.com/api/docs/guides/file-inputs), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
+
+## Siklus development di server
+
+1. Ambil perubahan dengan `git pull --ff-only` pada branch `main`.
+2. Jalankan test/build Java dan build Vue dengan perintah validasi di atas.
+3. Bila build berhasil, restart service backend dan sajikan hasil `frontend/dist` melalui Nginx. Jika memakai Compose, jalankan `docker compose up -d --build`.
+4. Periksa login, upload PDF, status ekstraksi, koreksi lot, analisis, max bid, dan bid board mengikuti `docs/SMOKE_TEST.md`.
+5. Catat error beserta log backend dan contoh PDF yang memicu masalah untuk diperbaiki.
+
+Untuk instalasi pertama ikuti bagian setup server lebih dahulu. Jangan masukkan `.env`, API key, password, atau katalog pribadi ke git.

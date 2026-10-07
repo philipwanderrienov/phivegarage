@@ -10,4 +10,4 @@
 
 Not yet validated against a running external PostgreSQL server or live OpenAI API/PDF. No user API key or real auction PDF was supplied. Live integration smoke-test steps are in `SMOKE_TEST.md`.
 
-Initial GitHub Actions run `37595472513` ended in failure before any job steps ran; jobs exposed no step logs. Local builds/tests above completed successfully. Check the repository Actions page for runner/account availability before relying on CI status.
+Development testing now runs directly on the user's server. No GitHub Actions workflow is installed. The earlier Actions jobs did not start because GitHub reported an account billing lock; this does not affect the successful local builds above. Follow `SMOKE_TEST.md` for server validation.
