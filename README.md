@@ -71,10 +71,11 @@ Akses lokal: `http://localhost:8090`; Compose bind ke localhost. Untuk akses pub
 
 - `sql/000_database.sql`: role/database, dijalankan sebagai admin. Ganti password placeholder.
 - `sql/001_schema.sql`: DDL awal yang sama dengan migration V1.
+- `sql/004_purchase_decisions.sql`: migration V4, laporan keputusan beli, foto unit, dan hubungan pembelian aktual ke inventory.
 - `sql/003_won_units.sql`: migration V3, unit dimenangkan, pengeluaran per unit, serta dana awal.
 - `sql/002_auction_houses.sql`: migration V2, tabel balai lelang + referensi dan snapshot tarif katalog. Flyway menjalankannya otomatis, termasuk untuk instalasi V1 yang sudah ada.
 
-Jika benar-benar memasang DDL secara manual pada DB baru, jalankan script 001, 002, lalu 003 sekali sesuai urutan, lalu baseline Flyway versi 3 dengan CLI Flyway sebelum backend pertama kali dinyalakan. Jalur paling sederhana tetap membiarkan aplikasi menjalankan migration V1 sendiri. Jangan menyalakan `baseline-on-migrate` pada database yang belum diperiksa.
+Jika benar-benar memasang DDL secara manual pada DB baru, jalankan script 001, 002, 003, lalu 004 sekali sesuai urutan, lalu baseline Flyway versi 4 dengan CLI Flyway sebelum backend pertama kali dinyalakan. Jalur paling sederhana tetap membiarkan aplikasi menjalankan migration V1 sendiri. Jangan menyalakan `baseline-on-migrate` pada database yang belum diperiksa.
 
 ## Bagaimana angka dihitung
 
@@ -132,7 +133,7 @@ mvn -f backend/pom.xml verify
 cd frontend && npm run build
 ```
 
-Selama server maintenance, pengujian dan build dilakukan secara lokal. Setelah server siap, pengujian integrasi dilakukan langsung di server. GitHub digunakan untuk menyimpan source dan riwayat perubahan; tidak ada workflow GitHub Actions. 40 test mencakup budget cap, fee persentase, rounding, deal yang tidak mungkin, gate verifikasi/pembanding/risiko servis, validasi structured output AI, PDF valid/rusak/password, dan rekonsiliasi rincian biaya, tarif JBA, batas bid user dan prefilter STNK/modal. Panduan smoke test: `docs/SMOKE_TEST.md`.
+Selama server maintenance, pengujian dan build dilakukan secara lokal. Setelah server siap, pengujian integrasi dilakukan langsung di server. GitHub digunakan untuk menyimpan source dan riwayat perubahan; tidak ada workflow GitHub Actions. 52 test mencakup budget cap, fee persentase, rounding, deal yang tidak mungkin, gate verifikasi/pembanding/risiko servis, validasi structured output AI, PDF valid/rusak/password, dan rekonsiliasi rincian biaya, tarif JBA, batas bid user dan prefilter STNK/modal. Panduan smoke test: `docs/SMOKE_TEST.md`.
 
 API references: [OpenAI PDF](https://developers.openai.com/api/docs/guides/file-inputs), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 
@@ -178,3 +179,24 @@ Pengeluaran mendukung tambah, edit, hapus: tanggal, kategori (bebas, tersedia sa
 Tarif balai dibekukan pada unit. Unit dari PDF memakai snapshot tarif katalog, unit manual memakai tarif aktif saat pencatatan. Balai dan sumber tidak dapat diubah setelah disimpan. Satu lot katalog hanya boleh dicatat menang sekali. Balai dan lot yang dirujuk unit dimenangkan tidak dapat dihapus. Perhitungan ini berjalan di Java dan tidak memanggil AI.
 
 API: `/api/won-units` (GET/POST), `/{id}` (GET/PUT/DELETE), `/{id}/expenses` (POST), `/{id}/expenses/{expenseId}` (PUT/DELETE), `/funds` (GET/PUT). Seluruh endpoint memakai autentikasi aplikasi yang sama.
+
+
+## Keputusan beli (seller langsung & lelang)
+
+Menu **Keputusan beli** menghasilkan laporan yang bisa dipakai untuk nego, menetapkan batas beli, atau melewatkan unit. Data dapat diisi manual atau diawali lewat tombol Keputusan beli pada lot katalog. Untuk seller langsung, biaya balai nol; untuk lelang, tarif master dibekukan saat laporan dibuat, atau memakai snapshot katalog untuk lot sumber.
+
+Input: identitas unit, STNK/BPKB, harga penawaran, modal per unit, batas beli user, target laba, servis rendah/tinggi, pajak kendaraan/dokumen, biaya lain, cadangan risiko, harga jual rendah/tengah/tinggi, bukti pembanding, verifikasi harga/inspeksi, serta risiko berat. Harga jual merupakan input user, tidak dicari otomatis. Centang harga terverifikasi mensyaratkan rincian pembanding terisi.
+
+- Batas beli = min(batas user, batas dari harga jual rendah − target laba, modal) setelah memperhitungkan biaya servis tinggi, biaya lain, cadangan, admin, dan pajak lelang. Pajak dibulatkan ke atas; batas beli dibulatkan ke bawah.
+- Buka nego = 90–95% batas beli, dibulatkan ke bawah Rp500 ribu untuk nominal di atas Rp1 juta. Ini heuristik yang ditampilkan eksplisit, bukan hasil survei harga atau jaminan seller menerima.
+- Titik impas = ALL IN pada harga penawaran dengan biaya tinggi. Harga jual untuk target laba = titik impas + target laba.
+- Simulasi menampilkan penawaran, batas beli, dua harga buka nego: ALL IN rendah/tinggi, laba pada tiga harga jual menggunakan biaya rendah, dan laba konservatif menggunakan harga jual rendah serta biaya tinggi.
+- Keputusan: Lewati jika STNK bukan ADA, risiko berat dicentang, atau tidak ada bid/beli positif yang memenuhi hitungan. Periksa dulu jika harga pasar/inspeksi/BPKB belum diverifikasi. Nego dulu jika penawaran melebihi batas. Beli bersyarat jika input terverifikasi dan harga memenuhi hitungan. Verifikasi merupakan pernyataan user, bukan pemeriksaan independen aplikasi.
+
+**AI & foto bersifat opsional.** Tombol Hitung & simpan bekerja tanpa API key dan tidak memakai AI. Foto JPG/PNG (maksimal 6 × 3 MB, 40 megapixel) disimpan privat di folder data server. Analisis AI dijalankan terpisah dengan tombol; memanggil OpenAI API berbayar dan mengirim input serta foto unit. AI memberikan ringkasan, indikasi likuiditas/target pembeli, strategi nego, indikasi visual, risiko, checklist, dan hal belum diketahui; tidak mengganti perhitungan Java. Tidak ada akses web, riset transaksi langsung, jaminan waktu jual, diagnosis mesin, atau konfirmasi bebas banjir/tabrakan dari foto. Unit berstatus Lewati (STNK bukan ADA, risiko berat, atau tidak ada harga beli layak) tidak dikirim ke AI. Retry memakai kuota kembali; token model/input/output ditampilkan pada laporan. Gunakan AI & penggunaan untuk tarif model yang diisi user; estimasi biaya dashboard saat ini masih untuk analisis katalog, bukan gabungan laporan keputusan.
+
+Laporan adalah snapshot tersimpan; tombol ubah input membuat laporan baru (verifikasi harga/inspeksi kembali tidak dicentang) sehingga hasil lama tetap tersedia. Kegagalan AI tidak menghapus hitungan. Job AI yang terputus saat restart ditandai gagal dan bisa dicoba ulang. Foto diakses melalui endpoint berautentikasi, bukan URL publik.
+
+Setelah transaksi selesai, **Catat sudah dibeli** meminta harga dan tanggal aktual, lalu membuat record di Unit dimenangkan menggunakan tarif laporan. Seller langsung tidak diwajibkan memiliki balai. Estimasi servis tidak otomatis menjadi pengeluaran aktual; input biaya aktual pada inventory. Satu laporan dan satu lot katalog tidak dapat dicatat sebagai pembelian dua kali. Catatan inventory dapat dikoreksi dengan tarif/sumber tetap terkunci.
+
+API: `/api/purchase-decisions` GET/POST (multipart `input` JSON + `photos`), `/{id}` GET, `/{id}/ai` POST, `/{id}/acquire` POST, `/{id}/photos/{photoId}` GET. Endpoint baru mengikuti Basic Auth + X-PhiveGarage yang sama.

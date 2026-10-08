@@ -10,7 +10,7 @@ public class Store {
  String encode(Object value){try{return json.writeValueAsString(value);}catch(Exception e){throw new IllegalArgumentException("Data tidak valid");}}
  <T>T decode(String value,Class<T> type){try{return json.readValue(value,type);}catch(Exception e){throw new IllegalStateException("Data tersimpan tidak valid",e);}}
  Map<String,Object> normalize(Map<String,Object> row){
-  for(String k:List.of("data","parameters","results","usage","input_lots","fee_snapshot")) if(row.containsKey(k)&&row.get(k)!=null) try{row.put(k,json.readTree(row.get(k).toString()));}catch(Exception e){throw new IllegalStateException(e);}
+  for(String k:List.of("data","parameters","results","usage","input_lots","fee_snapshot","ai")) if(row.containsKey(k)&&row.get(k)!=null) try{row.put(k,json.readTree(row.get(k).toString()));}catch(Exception e){throw new IllegalStateException(e);}
   return row;
  }
  List<Map<String,Object>> list(String sql,Object...args){return db.queryForList(sql,args).stream().map(this::normalize).toList();}

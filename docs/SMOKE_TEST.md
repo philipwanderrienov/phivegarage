@@ -1,6 +1,6 @@
 # Smoke test server
 
-1. Jalankan PostgreSQL dan backend (Flyway menjalankan migration V1 sampai V3), frontend melalui Vite atau Nginx.
+1. Jalankan PostgreSQL dan backend (Flyway menjalankan migration V1 sampai V4), frontend melalui Vite atau Nginx.
 2. `/api/health` menghasilkan UP. `/api/catalogs` tanpa auth harus 401. Dengan auth tanpa X-PhiveGarage harus 403.
 3. Login salah ditolak; login benar menampilkan katalog kosong. Pastikan key tidak terdapat pada network response/config atau JS bundle.
 4. Upload non-PDF dan PDF >20 MB ditolak. Upload PDF kecil 1–3 halaman dengan 2–3 lot yang bisa diperiksa manual. Status QUEUED → EXTRACTING → READY.
@@ -34,3 +34,14 @@ Live AI membutuhkan OPENAI_API_KEY milik operator, panggilan berbayar. Tidak ada
 6. Dana awal Rp57 juta: Dana menjadi Rp63,45 juta bila hanya ada penjualan tersebut. Unit belum terjual menambah modal tersimpan, bukan margin real. Uji penjualan rugi juga mengurangi Dana.
 7. Restart backend dan pastikan data/biaya/dana tetap tersimpan. Uji autentikasi endpoint baru, pengeluaran milik unit lain tidak boleh diedit lewat ID unit berbeda.
 8. Hapus unit: rincian biayanya ikut terhapus. Balai/lot yang masih dirujuk unit tidak dapat dihapus.
+
+
+## Keputusan beli
+1. Tanpa API key, hitung unit seller langsung dengan data sintetis: ask Rp48 juta, modal Rp65 juta, batas user Rp50 juta, target Rp5 juta, servis Rp2–5 juta, biaya lain/pajak/cadangan nol, harga jual Rp50/53/55 juta. Tandai STNK/BPKB ADA, bukti harga terisi, harga dan inspeksi terverifikasi. Harus Nego dulu, batas Rp40 juta, buka Rp36–38 juta; ALL IN Rp50–53 juta, titik impas Rp53 juta, target jual Rp58 juta; laba konservatif pada penawaran −Rp3 juta.
+2. Hapus verifikasi: Periksa dulu. STNK UNKNOWN atau risiko berat: Lewati dan tombol AI tidak aktif. Batas user Rp30 juta menurunkan batas beli; biaya tinggi/pajak/cadangan lebih besar menurunkan batas.
+3. Input rentang tidak berurutan atau centang harga terverifikasi tanpa rincian pembanding: harus ditolak backend. JPG/PNG valid diterima, file palsu/lebih dari 6/lebih dari 3 MB/foto terlalu besar ditolak.
+4. Dengan API key, analisis AI dan foto: hasil harus menjelaskan indikasi, risiko dan belum terverifikasi; perhitungan/batas beli tetap sama. Pastikan token muncul, kegagalan bisa retry tanpa kehilangan hitungan, request bersamaan tidak menduplikasi proses, restart tidak meninggalkan status PROCESSING.
+5. Foto tidak boleh diakses tanpa autentikasi atau lewat decision ID lain. Backup folder data bersama database.
+6. Buat keputusan dari katalog: identitas, jenis AUCTION, sumber dan tarif mengikuti katalog. Ubah tarif master setelah laporan dibuat: laporan lama tetap sama.
+7. Catat sudah dibeli dengan harga aktual: tampil di inventory, seller langsung admin/pajak lelang nol. Tidak boleh duplikat pembelian dari satu laporan/lot. Edit inventory seller langsung dan periksa tidak membutuhkan balai. Estimasi servis bukan pengeluaran aktual.
+8. Ubah input / buat simulasi baru: hasil sebelumnya tetap tersedia di riwayat. Uji tampilan mobile dan seluruh tabel dapat digeser.

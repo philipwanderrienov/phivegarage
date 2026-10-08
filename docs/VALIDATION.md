@@ -1,7 +1,7 @@
 # Validation — 7 October 2026
 
 - Java 17 / Maven `verify`: PASS, backend compiled and executable Spring Boot JAR packaged.
-- JUnit: 40 tests PASS (fee rounding, capital/profit cap, impossible deal, price evidence gate, verification gate, high repair estimate, missing-fact REVIEW, cost reconciliation, structured-output validation, corrupt/password PDF rejection).
+- JUnit: 52 tests PASS (fee rounding, capital/profit cap, impossible deal, price evidence gate, verification gate, high repair estimate, missing-fact REVIEW, cost reconciliation, structured-output validation, corrupt/password PDF rejection).
 - Additional Java calculator check: 160 sale/fee/capital scenarios PASS.
 - Vue production build: PASS (`npm run build`).
 - PostgreSQL DDL: PASS in PGlite (PostgreSQL WASM), tables `catalogs`, `lots`, `analyses` created.
@@ -22,3 +22,10 @@ Won-unit update (2026-10-07): Maven `verify` PASS (40 tests total) and Vue produ
 V1→V3 SQL PASS in PostgreSQL WASM: default starting funds, unique source lot, protected house/lot references, positive expense amount, expense deletion cascade. Browser API-fixture checks PASS: manual won-unit create/edit/delete, expense create/edit/delete, target/real margins, sale, funds, catalogue Catat menang prefill and locked house/source, mobile width (390px), no page errors. Fixtures are synthetic and contain no spreadsheet records.
 
 Java JDBC + PostgreSQL persistence/restart and real server authentication remain pending server smoke tests. The source spreadsheet was read for formulas; it was not edited and its private inventory was not copied into the repository.
+
+
+Purchase-decision update (2026-10-08): Maven verify PASS, 52 Java tests total; Vue build PASS. New coverage includes direct-purchase negotiation/max price, pessimistic profit/loss, missing evidence/inspection/BPKB, STNK/critical-risk gates, user cap, insufficient capital, auction fee rounding/budget, corrupt/valid image input, malformed AI output, invalid ranges/evidence and editing direct inventory with no house.
+
+V1→V4 DDL PASS in PostgreSQL WASM: direct inventory nullable house, unique acquired decision, decision history deletion restriction, photo cascade. Browser fixtures PASS: direct input/report/scenarios, optional AI explanation, skip-button gate, photo multipart/blob preview, new-simulation verification reset, history, seller acquisition into inventory, catalogue seed & house/source lock, mobile 390px with no document overflow or page errors. Browser AI responses and JDBC unit tests are mocked; they do not prove live OpenAI or Java+PostgreSQL integration. Images and units in tests are synthetic.
+
+Server smoke tests still pending: real JDBC persistence/transactions, filesystem/database rollback, authenticated photo access, live model image input and structured output, duplicate queue/acquisition requests, and restart/retry. Existing GitHub Actions remain absent.

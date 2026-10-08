@@ -17,7 +17,7 @@ public class WonApi {
   @Positive @Max(100000000000L) Long idealBid,@Positive @Max(100000000000L) long winningBid,@NotNull LocalDate wonDate,
   @Positive @Max(100000000000L) Long medianPrice,@Positive @Max(100000000000L) Long targetPrice,
   @Positive @Max(100000000000L) Long dealPrice,LocalDate soldDate,@Size(max=5000) String notes,String link){}
- public record SaveUnit(@NotNull UUID houseId,UUID sourceLotId,@NotNull @Valid UnitData data){}
+ public record SaveUnit(UUID houseId,UUID sourceLotId,@NotNull @Valid UnitData data){}
  public record Expense(@NotNull LocalDate date,@NotBlank @Size(max=60) String category,@NotBlank @Size(max=1000) String description,@Positive @Max(100000000000L) long amount){}
  public record Funds(@PositiveOrZero @Max(100000000000L) long startingFunds){}
  static void validate(UnitData d){if((d.dealPrice()==null)!=(d.soldDate()==null))throw new IllegalArgumentException("Harga deal dan tanggal terjual harus diisi bersama");if(d.soldDate()!=null&&d.soldDate().isBefore(d.wonDate()))throw new IllegalArgumentException("Tanggal jual tidak boleh sebelum tanggal menang");}
@@ -33,12 +33,12 @@ public class WonApi {
  }
  @PutMapping("/funds") Object funds(@Valid @RequestBody Funds body){store.db.update("UPDATE garage_settings SET starting_funds=? WHERE id=1",body.startingFunds());return Map.of("saved",true);}
  @GetMapping("/{id}") Object get(@PathVariable UUID id){var row=decorate(store.one("SELECT * FROM won_units WHERE id=?",id));row.put("expenses",store.list("SELECT * FROM unit_expenses WHERE unit_id=? ORDER BY expense_date,id",id));return row;}
- @PostMapping Object create(@Valid @RequestBody SaveUnit body){validate(body.data());Map<String,Object> fee;
+ @PostMapping Object create(@Valid @RequestBody SaveUnit body){validate(body.data());if(body.houseId()==null)throw new IllegalArgumentException("Pilih balai; unit seller langsung dicatat dari menu Keputusan beli");Map<String,Object> fee;
   if(body.sourceLotId()!=null){var source=store.one("SELECT c.auction_house_id,c.fee_snapshot FROM lots l JOIN catalogs c ON c.id=l.catalog_id WHERE l.id=?",body.sourceLotId());if(!body.houseId().equals(source.get("auction_house_id")))throw new IllegalArgumentException("Balai harus sesuai dengan katalog sumber");var node=(JsonNode)source.get("fee_snapshot");if(node==null)throw new IllegalArgumentException("Pilih tarif balai pada katalog sumber terlebih dahulu");fee=json.convertValue(node,new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});}else fee=houses.snapshot(body.houseId());
   UUID id=UUID.randomUUID();store.db.update("INSERT INTO won_units(id,source_lot_id,auction_house_id,data,fee_snapshot) VALUES(?,?,?,?::jsonb,?::jsonb)",id,body.sourceLotId(),body.houseId(),store.encode(body.data()),store.encode(fee));return Map.of("id",id);
  }
  @PutMapping("/{id}") Object update(@PathVariable UUID id,@Valid @RequestBody SaveUnit body){validate(body.data());var row=store.one("SELECT * FROM won_units WHERE id=?",id);
-  if(!body.houseId().equals(row.get("auction_house_id"))||!Objects.equals(body.sourceLotId(),row.get("source_lot_id")))throw new IllegalArgumentException("Balai/sumber unit tidak dapat diubah; histori tarif harus tetap tersimpan");
+  if(!Objects.equals(body.houseId(),row.get("auction_house_id"))||!Objects.equals(body.sourceLotId(),row.get("source_lot_id")))throw new IllegalArgumentException("Balai/sumber unit tidak dapat diubah; histori tarif harus tetap tersimpan");
   store.db.update("UPDATE won_units SET data=?::jsonb WHERE id=?",store.encode(body.data()),id);return Map.of("saved",true);
  }
  @DeleteMapping("/{id}") Object delete(@PathVariable UUID id){store.one("SELECT id FROM won_units WHERE id=?",id);store.db.update("DELETE FROM won_units WHERE id=?",id);return Map.of("deleted",true);}
