@@ -26,8 +26,12 @@ public class VehicleHunterController {
  }
  @GetMapping("/listings")
  public List<Map<String,Object>> list(@RequestParam(required=false) String brand,@RequestParam(required=false) Long maxPrice) {
-  return db.queryForList("SELECT * FROM hunter_listings WHERE (? IS NULL OR lower(brand)=lower(?)) AND (? IS NULL OR asking_price<=?) ORDER BY imported_at DESC LIMIT 500",
-    brand,brand,maxPrice,maxPrice);
+  StringBuilder sql=new StringBuilder("SELECT * FROM hunter_listings WHERE 1=1");
+  List<Object> args=new ArrayList<>();
+  if(brand!=null && !brand.isBlank()){sql.append(" AND lower(brand)=lower(?)");args.add(brand);}
+  if(maxPrice!=null){sql.append(" AND asking_price<=?");args.add(maxPrice);}
+  sql.append(" ORDER BY imported_at DESC LIMIT 500");
+  return db.queryForList(sql.toString(),args.toArray());
  }
  @PostMapping("/listings")
  public Map<String,Object> add(@RequestBody ListingInput input) {
