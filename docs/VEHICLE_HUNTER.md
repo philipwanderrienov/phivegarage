@@ -58,3 +58,11 @@ The documented Meta Catalog Management endpoints (`/{business-id}/owned_product_
 ## Listing verification gate
 
 PATCH `/api/hunter/listings/{id}/status` with JSON `{"status":"ACTIVE"}`, `UNVERIFIED`, `SOLD`, or `REMOVED`. ACTIVE is user-attested, never a claim of Meta confirmation. Unverified listings cannot receive BUY; SOLD/REMOVED are SKIP. The UI exposes the manual status selector and discards stale analysis on changes.
+
+## Hunting keyword priorities
+
+The default keyword set is: **BU**, **Butuh Uang**, **Butuh dana cepat**, **Jual cepat**, **Jual rugi**, **Pemakaian pribadi**, **Atas nama pribadi**. All seven are selectable independently in the Vehicle Hunter UI. A keyword-only toggle filters stored candidates; matched phrases are displayed and results are sorted by maximum keyword priority. Backend matching is case-insensitive, whitespace-normalized, and uses token boundaries so BU does not match fragments inside longer words.
+
+Urgency claims (BU, Butuh Uang, Butuh dana cepat, Jual cepat) rank first for *review*, followed by Jual rugi, then private-use/ownership claims. This rank is only a discovery hint: it does not alter price calculations, bypass documentation checks, prove ownership, or imply the seller truly needs cash.
+
+The keyword ↗ action performs a user-triggered ordinary Google search (keyword plus typed vehicle/location text). It does not scrape websites, save search results automatically, or claim provider access. When a licensed data connector is added, these exact keyword signals should be reused for search-query generation and incoming listing classification.
