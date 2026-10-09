@@ -1,13 +1,14 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
 import DecisionView from './DecisionView.vue'
+import VehicleHunter from './VehicleHunter.vue'
 import { LayoutDashboard, Files, SlidersHorizontal, Bookmark, Sparkles, UploadCloud, ArrowUpRight, Search, ChevronRight, Car, X, Check, LogOut, RefreshCw, FileText, AlertTriangle, Building2 } from 'lucide-vue-next'
 const username=ref('admin'), password=ref(''), auth=ref(''), view=ref('dashboard'), error=ref(''), busy=ref(false)
 const catalogs=ref([]), selected=ref(null), lots=ref([]), analysis=ref(null), history=ref([]), config=ref({}), file=ref(null), house=ref(''), query=ref(''), filter=ref('ALL')
 const detail=ref(null), edit=ref(null), uploadInput=ref(null), inputRate=ref(0), outputRate=ref(0)
 const criteria=ref({capital:65000000,maxPerUnit:65000000,maxBid:60000000,targetProfit:5000000,auctionFee:2500000,auctionFeePercent:0,repairBuffer:3000000,taxBuffer:2000000,otherCosts:1000000,riskBuffer:2000000,minYear:2012,maxKilometer:150000,transmission:'ALL',buyer:'DEALER',strategy:'FAST',requireStnk:true,requireBpkb:true,instructions:''})
 const moneyFields=[['capital','Modal tersedia'],['maxPerUnit','Modal maksimal / unit'],['maxBid','Maksimum harga bid (tanpa biaya)'],['targetProfit','Target laba bersih'],['repairBuffer','Buffer servis'],['taxBuffer','Buffer pajak'],['otherCosts','Transport & biaya lain'],['riskBuffer','Cadangan risiko']]
-const nav=[['dashboard','Overview',LayoutDashboard],['catalogs','Katalog lelang',Files],['analysis','Analisis unit',SlidersHorizontal],['watchlist','Bid board',Bookmark],['ai','AI & penggunaan',Sparkles],['houses','Balai lelang',Building2],['won','Unit dimenangkan',Car],['decision','Keputusan beli',SlidersHorizontal]]
+const nav=[['dashboard','Overview',LayoutDashboard],['catalogs','Katalog lelang',Files],['analysis','Analisis unit',SlidersHorizontal],['watchlist','Bid board',Bookmark],['ai','AI & penggunaan',Sparkles],['houses','Balai lelang',Building2],['won','Unit dimenangkan',Car],['decision','Keputusan beli',SlidersHorizontal],['hunter','Vehicle Hunter',Search]]
 const decisionSeed=ref(null)
 function decisionFromLot(l){decisionSeed.value={vehicle:l.data.vehicle,year:l.data.year??'',kilometer:l.data.kilometer??'',transmission:l.data.transmission||'UNKNOWN',stnk:l.data.stnk||'UNKNOWN',bpkb:l.data.bpkb||'UNKNOWN',askPrice:l.data.basePrice??'',capital:criteria.value.maxPerUnit,maxPurchase:criteria.value.maxBid,targetProfit:criteria.value.targetProfit,purchaseType:'AUCTION',houseId:selected.value.auction_house_id,sourceLotId:l.id,notes:l.data.notes||''};view.value='decision'}
 async function decisionAcquired(id){view.value='won';await perform(async()=>{await refreshWon();await loadWon(id)})}
@@ -90,6 +91,7 @@ const statusLabel=s=>({BID:'Layak bid',REVIEW:'Perlu diperiksa',SKIP:'Lewati',QU
  <aside class="sidebar"><div class="brand"><span class="brand-mark">P</span> phivegarage<span class="brand-dot">.</span></div><span class="workspace-label">PERSONAL WORKSPACE</span><nav><button v-for="[id,label,icon] in nav" :key="id" :class="{active:view===id}" @click="view=id; if(id==='won') perform(refreshWon)"><component :is="icon" :size="19"/>{{label}}<ChevronRight v-if="view===id" :size="15"/></button></nav><div class="sidebar-note"><span class="live-dot"></span> Decision support<p>Periksa unit langsung sebelum bidding. Hasil analisis membantu menilai, bukan menjamin kondisi.</p></div><button class="account" @click="logout"><span class="avatar">{{ username.slice(0,1).toUpperCase() }}</span><span>{{username}}<small>Private garage</small></span><LogOut :size="17"/></button></aside>
  <main><header class="topbar"><span>Workspace <ChevronRight :size="14"/> <b>{{nav.find(n=>n[0]===view)?.[1]}}</b></span><span class="topbar-status"><span class="live-dot"></span> {{config.aiConfigured?'AI terhubung':'AI belum dikonfigurasi'}}</span></header>
  <div class="content"><div v-if="error" class="error banner" role="alert">{{error}}<button class="icon-button" @click="error=''">×</button></div>
+ <VehicleHunter v-if="view==='hunter'" :api="api"/>
  <DecisionView v-if="view==='decision'" :api="api" :auth="auth" :config="config" :houses="houses" :seed="decisionSeed" @acquired="decisionAcquired"/>
  <template v-if="view==='dashboard'">
  <div class="page-heading"><div><span class="eyebrow">YOUR AUCTION WORKSPACE</span><h1>Temukan ruang untung.</h1><p>Mulai dari katalog. Akhiri dengan batas bid yang jelas.</p></div><button class="primary" @click="view='catalogs'"><UploadCloud :size="18"/> Upload katalog</button></div>
