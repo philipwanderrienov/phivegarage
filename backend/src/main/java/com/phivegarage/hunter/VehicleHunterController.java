@@ -25,6 +25,8 @@ public class VehicleHunterController {
    return Set.of("FACEBOOK_MANUAL","OLX_MANUAL","AUCTION_MANUAL","OTHER_MANUAL","LICENSED_FEED").contains(value)
      ? value:"OTHER_MANUAL";
  }
+ @GetMapping("/keywords")
+ public List<HuntingKeywords.Signal> huntingKeywords(){return HuntingKeywords.all();}
  @GetMapping("/listings")
  public List<Map<String,Object>> list(@RequestParam(required=false) String brand,@RequestParam(required=false) Long maxPrice) {
   StringBuilder sql=new StringBuilder("SELECT * FROM hunter_listings WHERE 1=1");
@@ -32,7 +34,7 @@ public class VehicleHunterController {
   if(brand!=null && !brand.isBlank()){sql.append(" AND lower(brand)=lower(?)");args.add(brand);}
   if(maxPrice!=null){sql.append(" AND asking_price<=?");args.add(maxPrice);}
   sql.append(" ORDER BY imported_at DESC LIMIT 500");
-  return db.queryForList(sql.toString(),args.toArray());
+  return db.queryForList(sql.toString(),args.toArray()).stream().map(this::withKeywords).toList();
  }
  @PostMapping("/listings")
  public Map<String,Object> add(@RequestBody ListingInput input) {
@@ -66,10 +68,18 @@ public class VehicleHunterController {
     compId,id,input.sourceUrl(),input.price(),Boolean.TRUE.equals(input.soldConfirmed()));
   return Map.of("id",compId);
  }
+ private Map<String,Object> withKeywords(Map<String,Object> original) {
+  Map<String,Object> listing=new LinkedHashMap<>(original);
+  String content=Objects.toString(listing.get("title"),"")+" "+Objects.toString(listing.get("notes"),"");
+  List<HuntingKeywords.Signal> matched=HuntingKeywords.match(content);
+  listing.put("matchedKeywords",matched.stream().map(HuntingKeywords.Signal::phrase).toList());
+  listing.put("keywordPriority",HuntingKeywords.priority(matched));
+  return listing;
+ }
  private Map<String,Object> ensure(UUID id) {
   List<Map<String,Object>> rows=db.queryForList("SELECT * FROM hunter_listings WHERE id=?",id);
   if(rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Listing tidak ditemukan");
-  return rows.get(0);
+  return withKeywords(rows.get(0));
  }
  @GetMapping("/listings/{id}/evaluate")
  public Map<String,Object> evaluate(@PathVariable UUID id,
@@ -106,9 +116,10 @@ public class VehicleHunterController {
   if(inactive) reasons.add("Listing sudah SOLD/REMOVED; jangan dianggap tersedia.");
   if(!active&&!inactive) reasons.add("Ketersediaan listing belum diverifikasi oleh user; perlu konfirmasi seller.");
   if(hasComps && ask>maxBuy) reasons.add("Harga iklan melebihi harga beli maksimal untuk target laba.");
+  if(((Number)l.get("keywordPriority")).intValue()>0) reasons.add("Keyword iklan adalah sinyal pencarian, bukan bukti harga murah, kepemilikan, atau transaksi aman.");
   reasons.add("Harga jual cepat adalah heuristik dari harga iklan terendah, bukan transaksi terkonfirmasi.");
   Map<String,Object> output=new LinkedHashMap<>();
-  output.put("listing",l);output.put("decision",decision);output.put("askingPrice",ask);
+  output.put("listing",l);output.put("keywordPriority",l.get("keywordPriority"));output.put("matchedKeywords",l.get("matchedKeywords"));output.put("decision",decision);output.put("askingPrice",ask);
   output.put("comparableCount",comps.size());output.put("medianAskingPrice",hasComps?median:null);
   output.put("quickSaleEstimate",hasComps?quick:null);output.put("maxBuyPrice",hasComps?maxBuy:null);
   output.put("estimatedProfitAtAsk",hasComps?potential:null);output.put("otherCosts",costs);
