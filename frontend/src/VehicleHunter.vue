@@ -1,7 +1,23 @@
 <script setup>
-import {ref,onMounted,watch} from 'vue'
+import {ref,computed,onMounted,watch} from 'vue'
 const props=defineProps({api:{type:Function,required:true}})
 const emit=defineEmits(['decision'])
+const keywordOptions=['BU','Butuh Uang','Butuh dana cepat','Jual cepat','Jual rugi','Pemakaian pribadi','Atas nama pribadi']
+const enabledKeywords=ref([...keywordOptions])
+const keywordOnly=ref(true)
+const keywordQuery=ref('')
+const matchingListings=computed(()=>{
+ const q=keywordQuery.value.trim().toLowerCase()
+ return list.value.filter(x=>{
+  if(q && ![x.title,x.brand,x.model,x.notes,x.location].some(v=>String(v||'').toLowerCase().includes(q)))return false
+  if(!keywordOnly.value)return true
+  return (x.matchedKeywords||[]).some(k=>enabledKeywords.value.includes(k))
+ }).sort((a,b)=>(b.keywordPriority||0)-(a.keywordPriority||0))
+})
+function searchPhrase(keyword){
+ const query=[keyword,keywordQuery.value,'mobil bekas'].filter(Boolean).join(' ')
+ window.open('https://www.google.com/search?q='+encodeURIComponent(query),'_blank','noopener,noreferrer')
+}
 const form=ref({source:'FACEBOOK_MANUAL',sourceUrl:'',title:'',brand:'Toyota',model:'',year:2005,askingPrice:45000000,kilometer:null,location:'Jabodetabek',transmission:'MANUAL',stnk:'UNKNOWN',bpkb:'UNKNOWN',notes:''})
 const budget=ref(null),targetProfit=ref(null),repairCost=ref(null),taxCost=ref(null),transportCost=ref(null),riskBuffer=ref(null),buyer=ref('RETAIL'),list=ref([]),selected=ref(null),evaluation=ref(null),compPrice=ref(null),compUrl=ref(''),error=ref(''),busy=ref(false)
 watch([budget,targetProfit,repairCost,taxCost,transportCost,riskBuffer,buyer],()=>{evaluation.value=null})
@@ -69,10 +85,15 @@ onMounted(()=>work(load))
    </form>
   </section>
   <section class="panel">
-   <h3>Kandidat tersimpan ({{list.length}})</h3>
+   <h3>Kandidat tersimpan ({{matchingListings.length}} dari {{list.length}})</h3>
+   <div class="hunter-keywords"><b>Fokus keyword hunting</b><p class="muted">Pilih kata yang diprioritaskan. Pencarian web dibuka manual, tidak melakukan scraping.</p>
+    <label v-for="keyword in keywordOptions" :key="keyword" class="hunter-chip"><input type="checkbox" :value="keyword" v-model="enabledKeywords">{{keyword}} <button type="button" @click.stop="searchPhrase(keyword)" title="Cari di web">↗</button></label>
+    <label><input type="checkbox" v-model="keywordOnly"> Hanya kandidat dengan keyword terpilih</label>
+    <input v-model="keywordQuery" placeholder="Filter model, daerah, atau teks listing">
+   </div>
    <p v-if="!list.length">Belum ada listing. Tambahkan kandidat dari sumber yang dapat diperiksa.</p>
-   <button class="hunter-result" v-for="item in list" :key="item.id" @click="choose(item)">
-    <b>{{item.brand}} {{item.model}} {{item.manufacture_year}}</b><span>{{idr(item.asking_price)}}</span><small>{{item.source}} · {{item.location}}</small>
+   <button class="hunter-result" v-for="item in matchingListings" :key="item.id" @click="choose(item)">
+    <b>{{item.brand}} {{item.model}} {{item.manufacture_year}}</b><span>{{idr(item.asking_price)}}</span><small>{{item.source}} · {{item.location}}</small><small v-if="item.matchedKeywords?.length">Keyword: {{item.matchedKeywords.join(", ")}}</small>
    </button>
   </section>
  </div>
@@ -99,5 +120,5 @@ onMounted(()=>work(load))
 </section>
 </template>
 <style scoped>
-.hunter-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.hunter-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hunter-form label,.hunter-controls label{display:flex;flex-direction:column;gap:5px;font-size:13px}.hunter-form input,.hunter-form select,.hunter-controls input{width:100%;padding:10px;min-width:0}.hunter-controls{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:18px 0}.hunter-controls label{flex:1;min-width:180px}.hunter-result{display:flex;flex-direction:column;text-align:left;width:100%;padding:12px;margin:9px 0;border:1px solid #7775;border-radius:8px;background:transparent;color:inherit;cursor:pointer}.hunter-result span{font-weight:bold}.hunter-result small{opacity:.7}.hunter-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.hunter-stats>div{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #7775;border-radius:8px}.hunter-stats b{font-size:18px}@media(max-width:900px){.hunter-grid,.hunter-stats{grid-template-columns:1fr}.hunter-form{grid-template-columns:1fr}}
+.hunter-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.hunter-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hunter-form label,.hunter-controls label{display:flex;flex-direction:column;gap:5px;font-size:13px}.hunter-form input,.hunter-form select,.hunter-controls input{width:100%;padding:10px;min-width:0}.hunter-controls{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:18px 0}.hunter-controls label{flex:1;min-width:180px}.hunter-result{display:flex;flex-direction:column;text-align:left;width:100%;padding:12px;margin:9px 0;border:1px solid #7775;border-radius:8px;background:transparent;color:inherit;cursor:pointer}.hunter-result span{font-weight:bold}.hunter-result small{opacity:.7}.hunter-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.hunter-stats>div{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #7775;border-radius:8px}.hunter-stats b{font-size:18px}.hunter-keywords{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.hunter-keywords>b,.hunter-keywords>p,.hunter-keywords>input{width:100%}.hunter-chip{border:1px solid #7776;border-radius:8px;padding:7px;display:flex;align-items:center;gap:6px;font-size:12px}.hunter-chip button{border:0;background:transparent;color:inherit;cursor:pointer}.hunter-keywords>label:not(.hunter-chip){width:100%;font-size:13px}@media(max-width:900px){.hunter-grid,.hunter-stats{grid-template-columns:1fr}.hunter-form{grid-template-columns:1fr}}
 </style>
