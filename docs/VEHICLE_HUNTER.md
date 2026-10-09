@@ -50,3 +50,11 @@ Vehicle Hunter requires users to enter budget, target profit, repair allowance, 
 ## Validation checklist
 
 Run `mvn -f backend/pom.xml verify` to execute VehicleHunterControllerTest (dynamic budget, target profit, variable repairs, missing comparables, invalid input). Run `cd frontend && npm ci && npm run build`. Smoke-test: create candidate, supply all six monetary inputs, add comparable prices, calculate, change one cost (previous result should clear), calculate again, and click **Lanjut ke Keputusan Beli**. Ensure final purchase report is not treated as independently verified. Automated build and deployment are not yet confirmed.
+
+## Meta API review (2026-10-09)
+
+The documented Meta Catalog Management endpoints (`/{business-id}/owned_product_catalogs`, commerce catalog APIs) manage catalogs accessible to an authorized business, not arbitrary public vehicle listings in Facebook Marketplace. No official general-purpose Marketplace search/listing endpoint was verified on Meta for Developers. Third-party APIs such as Social Fetch and ScrapeAtlas advertise Marketplace search; they are **not official Meta APIs**, and their licensing, legality for this application, coverage of Jabodetabek, prices and reliability must be independently checked before any integration. Do not store Facebook session cookies or bypass access restrictions.
+
+## Listing verification gate
+
+PATCH `/api/hunter/listings/{id}/status` with JSON `{"status":"ACTIVE"}`, `UNVERIFIED`, `SOLD`, or `REMOVED`. ACTIVE is user-attested, never a claim of Meta confirmation. Unverified listings cannot receive BUY; SOLD/REMOVED are SKIP. The UI exposes the manual status selector and discards stale analysis on changes.
