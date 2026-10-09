@@ -16,6 +16,7 @@ public class VehicleHunterController {
  public record ListingInput(String source,String sourceUrl,String title,String brand,String model,Integer year,
      Long askingPrice,Integer kilometer,String location,String transmission,String stnk,String bpkb,String notes) {}
  public record ComparableInput(String sourceUrl,Long price,Boolean soldConfirmed) {}
+ public record ListingStatusInput(String status) {}
  public record Strategy(Long budget,Long targetProfit,Long repairCost,Long taxCost,Long transportCost,
      Long riskBuffer,String buyer,Double discountPercent) {}
  private long positive(Long value,long fallback) { return value==null?fallback:Math.max(0,value); }
@@ -46,6 +47,15 @@ public class VehicleHunterController {
     input.year(),input.askingPrice(),input.kilometer(),input.location(),input.transmission(),status(input.stnk()),
     status(input.bpkb()),Objects.toString(input.notes(),""));
   return Map.of("id",id,"status","CREATED");
+ }
+ @PatchMapping("/listings/{id}/status")
+ public Map<String,Object> updateListingStatus(@PathVariable UUID id,@RequestBody ListingStatusInput input) {
+  ensure(id);
+  if(input==null || input.status()==null || !Set.of("UNVERIFIED","ACTIVE","SOLD","REMOVED").contains(input.status()))
+   throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Status listing tidak valid");
+  db.update("UPDATE hunter_listings SET listing_status=?, verified_at=? WHERE id=?",
+    input.status(), "ACTIVE".equals(input.status())?java.time.OffsetDateTime.now():null,id);
+  return Map.of("id",id,"listingStatus",input.status());
  }
  @PostMapping("/listings/{id}/comparables")
  public Map<String,Object> comparable(@PathVariable UUID id,@RequestBody ComparableInput input) {
@@ -87,12 +97,14 @@ public class VehicleHunterController {
   long potential=hasComps?quick-ask-costs:0;
   boolean docs="ADA".equals(l.get("stnk_status")) && "ADA".equals(l.get("bpkb_status"));
   boolean inactive=Set.of("SOLD","REMOVED").contains(l.get("listing_status"));
+  boolean active="ACTIVE".equals(l.get("listing_status"));
   String decision=inactive|| (hasComps && (maxBuy<=0 || ask>budget))?"SKIP":
-    !docs||!hasComps?"REVIEW":ask<=maxBuy?"BUY":"NEGO";
+    !docs||!hasComps||!active?"REVIEW":ask<=maxBuy?"BUY":"NEGO";
   List<String> reasons=new ArrayList<>();
   if(!hasComps) reasons.add("Belum ada data harga pembanding; harga pasar tidak boleh ditebak.");
   if(!docs) reasons.add("STNK dan BPKB harus dikonfirmasi ADA sebelum membeli.");
   if(inactive) reasons.add("Listing sudah SOLD/REMOVED; jangan dianggap tersedia.");
+  if(!active&&!inactive) reasons.add("Ketersediaan listing belum diverifikasi oleh user; perlu konfirmasi seller.");
   if(hasComps && ask>maxBuy) reasons.add("Harga iklan melebihi harga beli maksimal untuk target laba.");
   reasons.add("Harga jual cepat adalah heuristik dari harga iklan terendah, bukan transaksi terkonfirmasi.");
   Map<String,Object> output=new LinkedHashMap<>();
