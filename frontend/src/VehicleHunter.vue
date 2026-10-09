@@ -36,6 +36,14 @@ function sendToDecision(){
  evidenceConfirmed:false,inspectionConfirmed:false,purchaseType:'DIRECT',
  notes:[l.notes||'',l.source_url||''].filter(Boolean).join('\\n')})
 }
+async function setStatus(status){
+ if(!selected.value)return
+ await work(async()=>{
+  await props.api('/hunter/listings/'+selected.value+'/status',{method:'PATCH',body:JSON.stringify({status})})
+  await load()
+  evaluation.value=null
+ })
+}
 async function addComparable(){if(!selected.value)return;await work(async()=>{await props.api('/hunter/listings/'+selected.value+'/comparables',{method:'POST',body:JSON.stringify({price:Number(compPrice.value),sourceUrl:compUrl.value||null})});compPrice.value=null;compUrl.value='';if(budget.value!==null&&targetProfit.value!==null)evaluation.value=await props.api(evaluationUrl())})}
 onMounted(()=>work(load))
 </script>
@@ -69,6 +77,15 @@ onMounted(()=>work(load))
   </section>
  </div>
  <section class="panel" v-if="selected">
+ <div class="hunter-controls">
+  <label>Status iklan (verifikasi manual)
+   <select :value="list.find(x=>x.id===selected)?.listing_status||'UNVERIFIED'" @change="setStatus($event.target.value)">
+    <option value="UNVERIFIED">Belum diverifikasi</option><option value="ACTIVE">Aktif — dikonfirmasi</option>
+    <option value="SOLD">Terjual</option><option value="REMOVED">Dihapus</option>
+   </select>
+  </label>
+  <p>Status aktif adalah pernyataan user, bukan pengecekan otomatis Facebook.</p>
+ </div>
   <h3>Analisis finansial</h3>
   <div class="hunter-controls"><label>Modal maksimal (Rp)<input type="number" min="1" step="1" required placeholder="Masukkan modal" v-model.number="budget"></label><label>Target profit bersih (Rp)<input type="number" min="0" step="1" required placeholder="Masukkan target laba" v-model.number="targetProfit"></label><label>Estimasi servis (Rp)<input type="number" min="0" step="1" v-model.number="repairCost" placeholder="Isi biaya"></label><label>Pajak dan dokumen (Rp)<input type="number" min="0" step="1" v-model.number="taxCost" placeholder="Isi biaya"></label><label>Transport & iklan (Rp)<input type="number" min="0" step="1" v-model.number="transportCost" placeholder="Isi biaya"></label><label>Cadangan risiko (Rp)<input type="number" min="0" step="1" v-model.number="riskBuffer" placeholder="Isi biaya"></label><label>Target pembeli<select v-model="buyer"><option value="RETAIL">Retail</option><option value="DEALER">Pedagang</option></select></label><button class="secondary" @click="evaluate" :disabled="busy">Hitung ulang</button></div>
   <div v-if="evaluation">
