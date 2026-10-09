@@ -1,8 +1,9 @@
 <script setup>
-import {ref,onMounted} from 'vue'
+import {ref,onMounted,watch} from 'vue'
 const props=defineProps({api:{type:Function,required:true}})
 const form=ref({source:'FACEBOOK_MANUAL',sourceUrl:'',title:'',brand:'Toyota',model:'',year:2005,askingPrice:45000000,kilometer:null,location:'Jabodetabek',transmission:'MANUAL',stnk:'UNKNOWN',bpkb:'UNKNOWN',notes:''})
 const budget=ref(null),targetProfit=ref(null),list=ref([]),selected=ref(null),evaluation=ref(null),compPrice=ref(null),compUrl=ref(''),error=ref(''),busy=ref(false)
+watch([budget,targetProfit],()=>{evaluation.value=null})
 const idr=n=>n==null?'Belum ada data':new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n)
 async function work(fn){busy.value=true;error.value='';try{await fn()}catch(e){error.value=e.message||'Request gagal'}finally{busy.value=false}}
 async function load(){list.value=await props.api('/hunter/listings')}
@@ -14,7 +15,7 @@ function evaluationUrl(){
  const params=new URLSearchParams({budget:String(budget.value),targetProfit:String(targetProfit.value)})
  return '/hunter/listings/'+selected.value+'/evaluate?'+params.toString()
 }
-async function evaluate(){if(!selected.value)return;await work(async()=>{evaluation.value=await props.api(evaluationUrl())})}
+async function evaluate(){if(!selected.value)return;await work(async()=>{const url=evaluationUrl();evaluation.value=await props.api(url)})}
 async function addComparable(){if(!selected.value)return;await work(async()=>{await props.api('/hunter/listings/'+selected.value+'/comparables',{method:'POST',body:JSON.stringify({price:Number(compPrice.value),sourceUrl:compUrl.value||null})});compPrice.value=null;compUrl.value='';if(budget.value!==null&&targetProfit.value!==null)evaluation.value=await props.api(evaluationUrl())})}
 onMounted(()=>work(load))
 </script>
