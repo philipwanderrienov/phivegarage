@@ -21,7 +21,7 @@ class VehicleHunterControllerTest {
   listing.put("asking_price",43_000_000L);
   listing.put("stnk_status","ADA");
   listing.put("bpkb_status","ADA");
-  listing.put("listing_status","UNVERIFIED");
+  listing.put("listing_status","ACTIVE");
   when(db.queryForList(eq("SELECT * FROM hunter_listings WHERE id=?"),eq(id))).thenReturn(List.of(listing));
  }
  @SuppressWarnings({"rawtypes","unchecked"})
@@ -49,6 +49,17 @@ class VehicleHunterControllerTest {
   assertEquals("REVIEW",result.get("decision"));
   assertNull(result.get("quickSaleEstimate"));
   assertNull(result.get("maxBuyPrice"));
+ }
+ @Test void unverifiedListingRequiresReview() {
+  comparablePrices(60_000_000L);
+  var unverified=new HashMap<String,Object>();
+  unverified.put("asking_price",43_000_000L);
+  unverified.put("stnk_status","ADA");
+  unverified.put("bpkb_status","ADA");
+  unverified.put("listing_status","UNVERIFIED");
+  when(db.queryForList(eq("SELECT * FROM hunter_listings WHERE id=?"),eq(id))).thenReturn(List.of(unverified));
+  var result=controller.evaluate(id,65_000_000L,5_000_000L,0,0,0,0,"RETAIL");
+  assertEquals("REVIEW",result.get("decision"));
  }
  @Test void invalidFinancialParametersAreRejected() {
   assertThrows(ResponseStatusException.class,()->controller.evaluate(id,0,8_000_000L,0,0,0,0,"RETAIL"));
