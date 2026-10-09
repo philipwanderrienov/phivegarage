@@ -63,16 +63,16 @@ public class VehicleHunterController {
  }
  @GetMapping("/listings/{id}/evaluate")
  public Map<String,Object> evaluate(@PathVariable UUID id,
-    @RequestParam(defaultValue="50000000") long budget,
-    @RequestParam(defaultValue="8000000") long targetProfit,
+    @RequestParam long budget,
+    @RequestParam long targetProfit,
     @RequestParam(defaultValue="2500000") long repairCost,
     @RequestParam(defaultValue="1500000") long taxCost,
     @RequestParam(defaultValue="500000") long transportCost,
     @RequestParam(defaultValue="1500000") long riskBuffer,
     @RequestParam(defaultValue="RETAIL") String buyer) {
   Map<String,Object> l=ensure(id);
-  if(budget<0||targetProfit<0||repairCost<0||taxCost<0||transportCost<0||riskBuffer<0)
-    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Budget dan biaya tidak boleh negatif");
+  if(budget<=0||targetProfit<0||repairCost<0||taxCost<0||transportCost<0||riskBuffer<0)
+    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Budget harus lebih besar dari nol; target profit dan biaya tidak boleh negatif");
   long ask=((Number)l.get("asking_price")).longValue();
   List<Long> comps=db.query("SELECT price FROM hunter_comparables WHERE listing_id=? ORDER BY price",
     (rs,row)->rs.getLong(1),id);
