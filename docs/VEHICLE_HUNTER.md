@@ -46,3 +46,7 @@ Security: all endpoints inherit the existing HTTP Basic authentication and `X-Ph
 ## Dynamic inputs and handoff
 
 Vehicle Hunter requires users to enter budget, target profit, repair allowance, vehicle tax/document costs, transport/ads and risk reserve before running an evaluation. Changing an input clears stale evaluation results until the user recalculates. The **Lanjut ke Keputusan Beli** action populates the existing Purchase Decision form. The user must still confirm comparable evidence, documents and inspection; Hunter heuristics do not automatically set these flags.
+
+## Validation checklist
+
+Run `mvn -f backend/pom.xml verify` to execute VehicleHunterControllerTest (dynamic budget, target profit, variable repairs, missing comparables, invalid input). Run `cd frontend && npm ci && npm run build`. Smoke-test: create candidate, supply all six monetary inputs, add comparable prices, calculate, change one cost (previous result should clear), calculate again, and click **Lanjut ke Keputusan Beli**. Ensure final purchase report is not treated as independently verified. Automated build and deployment are not yet confirmed.
