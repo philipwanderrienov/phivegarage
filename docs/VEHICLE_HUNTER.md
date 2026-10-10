@@ -66,3 +66,9 @@ The default keyword set is: **BU**, **Butuh Uang**, **Butuh dana cepat**, **Jual
 Urgency claims (BU, Butuh Uang, Butuh dana cepat, Jual cepat) rank first for *review*, followed by Jual rugi, then private-use/ownership claims. This rank is only a discovery hint: it does not alter price calculations, bypass documentation checks, prove ownership, or imply the seller truly needs cash.
 
 The keyword ↗ action performs a user-triggered ordinary Google search (keyword plus typed vehicle/location text). It does not scrape websites, save search results automatically, or claim provider access. When a licensed data connector is added, these exact keyword signals should be reused for search-query generation and incoming listing classification.
+
+### Additional hunting signals
+- **Milik pribadi** — ownership claim (priority 1).
+- **Lanjut rawat** / **Lanjut ngerawatin** — handover wording (priority 2).
+- **Nerusin** / **Terusin** — colloquial handover wording (priority 2).
+Each variant is an independent selectable keyword. Matching continues to respect word boundaries and does not treat these phrases as verified ownership or a guaranteed bargain.
