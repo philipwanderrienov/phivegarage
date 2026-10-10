@@ -20,6 +20,9 @@ class HuntingKeywordsTest {
   assertTrue(HuntingKeywords.match(null).isEmpty());
   assertTrue(HuntingKeywords.match("Toyota Avanza 2014 automatic").isEmpty());
  }
+ @Test void namaPribadiIsRecognized() {
+  assertTrue(HuntingKeywords.match("STNK nama pribadi, pajak hidup").stream().anyMatch(x->x.phrase().equals("Nama pribadi")));
+ }
  @Test void additionalOwnershipAndHandoverPhrases() {
   var result=HuntingKeywords.match("MILIK PRIBADI, lanjut rawat, lanjut ngerawatin, nerusin, terusin");
   for(String phrase:List.of("Milik pribadi","Lanjut rawat","Lanjut ngerawatin","Nerusin","Terusin"))
