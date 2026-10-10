@@ -72,3 +72,5 @@ The keyword ↗ action performs a user-triggered ordinary Google search (keyword
 - **Lanjut rawat** / **Lanjut ngerawatin** — handover wording (priority 2).
 - **Nerusin** / **Terusin** — colloquial handover wording (priority 2).
 Each variant is an independent selectable keyword. Matching continues to respect word boundaries and does not treat these phrases as verified ownership or a guaranteed bargain.
+
+- **Nama pribadi** — additional ownership/documentation claim (priority 1); does not verify identity or legal ownership.
