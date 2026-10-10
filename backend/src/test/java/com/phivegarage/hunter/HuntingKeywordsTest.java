@@ -20,6 +20,17 @@ class HuntingKeywordsTest {
   assertTrue(HuntingKeywords.match(null).isEmpty());
   assertTrue(HuntingKeywords.match("Toyota Avanza 2014 automatic").isEmpty());
  }
+ @Test void additionalOwnershipAndHandoverPhrases() {
+  var result=HuntingKeywords.match("MILIK PRIBADI, lanjut rawat, lanjut ngerawatin, nerusin, terusin");
+  for(String phrase:List.of("Milik pribadi","Lanjut rawat","Lanjut ngerawatin","Nerusin","Terusin"))
+   assertTrue(result.stream().anyMatch(x->x.phrase().equals(phrase)),phrase);
+  assertEquals(5,result.size());
+  assertEquals(2,HuntingKeywords.priority(result));
+ }
+ @Test void handoverKeywordsRequireWordBoundaries() {
+  assertTrue(HuntingKeywords.match("meneruskan perjalanan").isEmpty());
+  assertTrue(HuntingKeywords.match("diterusin nanti").stream().noneMatch(x->x.phrase().equals("Terusin")));
+ }
  @Test void recognizesAllSevenTerms() {
   String input="BU Butuh Uang Butuh dana cepat Jual cepat Jual rugi Pemakaian pribadi Atas nama pribadi";
   assertEquals(7,HuntingKeywords.match(input).size());
