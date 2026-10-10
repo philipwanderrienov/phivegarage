@@ -15,7 +15,12 @@ public final class HuntingKeywords {
   new Signal("Jual cepat","URGENCY",3),
   new Signal("Jual rugi","PRICE_CLAIM",2),
   new Signal("Pemakaian pribadi","OWNERSHIP_CLAIM",1),
-  new Signal("Atas nama pribadi","OWNERSHIP_CLAIM",1)
+  new Signal("Atas nama pribadi","OWNERSHIP_CLAIM",1),
+  new Signal("Milik pribadi","OWNERSHIP_CLAIM",1),
+  new Signal("Lanjut rawat","HANDOVER",2),
+  new Signal("Lanjut ngerawatin","HANDOVER",2),
+  new Signal("Nerusin","HANDOVER",2),
+  new Signal("Terusin","HANDOVER",2)
  );
  public static List<Signal> all(){return SIGNALS;}
  public static List<Signal> match(String text) {
