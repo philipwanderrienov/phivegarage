@@ -2,7 +2,7 @@
 import {ref,computed,onMounted,watch} from 'vue'
 const props=defineProps({api:{type:Function,required:true}})
 const emit=defineEmits(['decision'])
-const keywordOptions=['BU','Butuh Uang','Butuh dana cepat','Jual cepat','Jual rugi','Pemakaian pribadi','Atas nama pribadi','Milik pribadi','Lanjut rawat','Lanjut ngerawatin','Nerusin','Terusin']
+const keywordOptions=['BU','Butuh Uang','Butuh dana cepat','Jual cepat','Jual rugi','Pemakaian pribadi','Atas nama pribadi','Milik pribadi','Nama pribadi','Lanjut rawat','Lanjut ngerawatin','Nerusin','Terusin']
 const enabledKeywords=ref([...keywordOptions])
 const keywordOnly=ref(true)
 const keywordQuery=ref('')
