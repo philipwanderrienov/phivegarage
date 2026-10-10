@@ -17,6 +17,7 @@ public final class HuntingKeywords {
   new Signal("Pemakaian pribadi","OWNERSHIP_CLAIM",1),
   new Signal("Atas nama pribadi","OWNERSHIP_CLAIM",1),
   new Signal("Milik pribadi","OWNERSHIP_CLAIM",1),
+  new Signal("Nama pribadi","OWNERSHIP_CLAIM",1),
   new Signal("Lanjut rawat","HANDOVER",2),
   new Signal("Lanjut ngerawatin","HANDOVER",2),
   new Signal("Nerusin","HANDOVER",2),
