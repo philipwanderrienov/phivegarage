@@ -36,6 +36,12 @@ class HuntingKeywordsTest {
  }
  @Test void recognizesAllSevenTerms() {
   String input="BU Butuh Uang Butuh dana cepat Jual cepat Jual rugi Pemakaian pribadi Atas nama pribadi";
-  assertEquals(7,HuntingKeywords.match(input).size());
+  var matched=HuntingKeywords.match(input).stream().map(HuntingKeywords.Signal::phrase).toList();
+  for (String original : List.of("BU","Butuh Uang","Butuh dana cepat","Jual cepat",
+      "Jual rugi","Pemakaian pribadi","Atas nama pribadi")) {
+   assertTrue(matched.contains(original), "Missing original keyword: "+original);
+  }
+  // "Atas nama pribadi" also contains the newly supported "Nama pribadi".
+  assertTrue(matched.contains("Nama pribadi"));
  }
 }
