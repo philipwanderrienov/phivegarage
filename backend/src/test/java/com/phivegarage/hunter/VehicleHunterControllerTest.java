@@ -61,6 +61,20 @@ class VehicleHunterControllerTest {
   var result=controller.evaluate(id,65_000_000L,5_000_000L,0,0,0,0,"RETAIL");
   assertEquals("REVIEW",result.get("decision"));
  }
+ @Test void dealerTargetUsesMoreConservativeResaleEstimate() {
+  comparablePrices(60_000_000L);
+  var retail=controller.evaluate(id,65_000_000L,5_000_000L,0,0,0,0,"RETAIL");
+  var dealer=controller.evaluate(id,65_000_000L,5_000_000L,0,0,0,0,"DEALER");
+  assertEquals(57_000_000L,retail.get("quickSaleEstimate"));
+  assertEquals(51_000_000L,dealer.get("quickSaleEstimate"));
+  assertEquals(6_000_000L,(long)retail.get("maxBuyPrice")-(long)dealer.get("maxBuyPrice"));
+ }
+ @Test void rejectsInvalidBuyerAndListingFields() {
+  comparablePrices(60_000_000L);
+  assertThrows(ResponseStatusException.class,()->controller.evaluate(id,65_000_000L,5_000_000L,0,0,0,0,"UNKNOWN"));
+  var invalid=new VehicleHunterController.ListingInput("OTHER_MANUAL",null,"Honda","Honda","Jazz",2010,45_000_000L,-5,null,null,null,null,null);
+  assertThrows(ResponseStatusException.class,()->controller.add(invalid));
+ }
  @Test void invalidFinancialParametersAreRejected() {
   assertThrows(ResponseStatusException.class,()->controller.evaluate(id,0,8_000_000L,0,0,0,0,"RETAIL"));
   assertThrows(ResponseStatusException.class,()->controller.evaluate(id,65_000_000L,-1,0,0,0,0,"RETAIL"));
