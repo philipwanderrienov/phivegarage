@@ -1,9 +1,11 @@
 package com.phivegarage;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 import org.springframework.jdbc.core.JdbcTemplate;
 import com.fasterxml.jackson.databind.*;
 import java.util.*;
-@Repository
+// JdbcTemplate already translates SQL exceptions. Avoid @Repository proxying because
+// existing services access store.db directly, which bypasses proxy interception.
+@Component
 public class Store {
  final JdbcTemplate db; final ObjectMapper json;
  public Store(JdbcTemplate db,ObjectMapper json){this.db=db;this.json=json;}
