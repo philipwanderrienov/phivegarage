@@ -74,3 +74,12 @@ The keyword ↗ action performs a user-triggered ordinary Google search (keyword
 Each variant is an independent selectable keyword. Matching continues to respect word boundaries and does not treat these phrases as verified ownership or a guaranteed bargain.
 
 - **Nama pribadi** — additional ownership/documentation claim (priority 1); does not verify identity or legal ownership.
+
+## Stability fixes — 2026-11-04
+
+- The keyword-only filter is now OFF on first load so stored listings without urgency keywords are visible; users can opt in to filtering.
+- Candidate entry starts blank instead of prefilled with a fake vehicle and includes description/notes, mileage, and transmission. Keywords are matched against both title and notes.
+- Choosing a listing or adding a comparable no longer starts an evaluation with partially entered costs. Changed strategy inputs clear previous results.
+- Handoff to Purchase Decision requires at least one comparable and never pre-confirms price evidence or physical inspection.
+- Backend validates year, mileage, buyer type, and financial inputs; budget and all cost inputs remain explicit user values. Added tests for dealer-vs-retail assumptions and invalid input.
+- These tests were committed but have not been run in a Maven-enabled checkout. The repository has no GitHub status checks on this branch; do NOT interpret this as a passed CI pipeline. Run `mvn -f backend/pom.xml clean verify` and `cd frontend && npm ci && npm run build` before merge or production deployment.
