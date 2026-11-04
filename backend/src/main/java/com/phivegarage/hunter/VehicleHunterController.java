@@ -38,11 +38,15 @@ public class VehicleHunterController {
  }
  @PostMapping("/listings")
  public Map<String,Object> add(@RequestBody ListingInput input) {
-  if(input.title()==null||input.title().isBlank()||input.brand()==null||input.brand().isBlank()
+  if(input==null || input.title()==null||input.title().isBlank()||input.brand()==null||input.brand().isBlank()
      ||input.model()==null||input.model().isBlank()||input.askingPrice()==null||input.askingPrice()<=0)
     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Nama, merek, model, dan harga positif wajib diisi");
   if(input.sourceUrl()!=null && !input.sourceUrl().isBlank() && !input.sourceUrl().matches("https?://.*"))
     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Link sumber harus HTTP(S)");
+  if(input.year()!=null && (input.year()<1950 || input.year()>2100))
+   throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Tahun kendaraan tidak valid");
+  if(input.kilometer()!=null && input.kilometer()<0)
+   throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Kilometer tidak boleh negatif");
   UUID id=UUID.randomUUID();
   db.update("INSERT INTO hunter_listings(id,source,source_url,title,brand,model,manufacture_year,asking_price,kilometer,location,transmission,stnk_status,bpkb_status,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     id,source(input.source()),input.sourceUrl(),input.title().trim(),input.brand().trim(),input.model().trim(),
@@ -62,7 +66,7 @@ public class VehicleHunterController {
  @PostMapping("/listings/{id}/comparables")
  public Map<String,Object> comparable(@PathVariable UUID id,@RequestBody ComparableInput input) {
   ensure(id);
-  if(input.price()==null||input.price()<=0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Harga pembanding harus positif");
+  if(input==null||input.price()==null||input.price()<=0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Harga pembanding harus positif");
   UUID compId=UUID.randomUUID();
   db.update("INSERT INTO hunter_comparables(id,listing_id,source_url,price,sold_confirmed) VALUES(?,?,?,?,?)",
     compId,id,input.sourceUrl(),input.price(),Boolean.TRUE.equals(input.soldConfirmed()));
@@ -91,6 +95,8 @@ public class VehicleHunterController {
     @RequestParam long riskBuffer,
     @RequestParam(defaultValue="RETAIL") String buyer) {
   Map<String,Object> l=ensure(id);
+  if(!Set.of("RETAIL","DEALER").contains(buyer))
+   throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Target pembeli harus RETAIL atau DEALER");
   if(budget<=0||targetProfit<0||repairCost<0||taxCost<0||transportCost<0||riskBuffer<0)
     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Budget harus lebih besar dari nol; target profit dan biaya tidak boleh negatif");
   long ask=((Number)l.get("asking_price")).longValue();
@@ -103,8 +109,17 @@ public class VehicleHunterController {
   long median=hasComps?comps.get(comps.size()/2):0;
   double factor="DEALER".equalsIgnoreCase(buyer)?0.85:0.95;
   long quick=hasComps?BigDecimal.valueOf(comps.get(0)).multiply(BigDecimal.valueOf(factor)).setScale(0,RoundingMode.FLOOR).longValue():0;
-  long maxBuy=hasComps?Math.max(0,Math.min(budget-costs,quick-targetProfit-costs)):0;
-  long potential=hasComps?quick-ask-costs:0;
+  long maxBuy=0, potential=0;
+  if(hasComps) {
+   // BigDecimal avoids silent overflow when user-provided monetary values are extreme.
+   BigDecimal sale=BigDecimal.valueOf(quick);
+   BigDecimal expenses=BigDecimal.valueOf(costs);
+   BigDecimal max=BigDecimal.valueOf(budget).subtract(expenses)
+     .min(sale.subtract(BigDecimal.valueOf(targetProfit)).subtract(expenses))
+     .max(BigDecimal.ZERO);
+   maxBuy=max.longValueExact();
+   potential=sale.subtract(BigDecimal.valueOf(ask)).subtract(expenses).longValueExact();
+  }
   boolean docs="ADA".equals(l.get("stnk_status")) && "ADA".equals(l.get("bpkb_status"));
   boolean inactive=Set.of("SOLD","REMOVED").contains(l.get("listing_status"));
   boolean active="ACTIVE".equals(l.get("listing_status"));
