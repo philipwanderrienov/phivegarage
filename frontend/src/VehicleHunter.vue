@@ -25,7 +25,7 @@ const idr=n=>n==null?'Belum ada data':new Intl.NumberFormat('id-ID',{style:'curr
 async function work(fn){busy.value=true;error.value='';try{await fn()}catch(e){error.value=e.message||'Request gagal'}finally{busy.value=false}}
 async function load(){list.value=await props.api('/hunter/listings')}
 async function add(){await work(async()=>{const x=await props.api('/hunter/listings',{method:'POST',body:JSON.stringify(form.value)});await load();selected.value=x.id;evaluation.value=null})}
-async function choose(row){selected.value=row.id;evaluation.value=null;if(budget.value!==null&&targetProfit.value!==null)await evaluate()}
+async function choose(row){selected.value=row.id;evaluation.value=null}
 function evaluationUrl(){
  if(budget.value===null||budget.value===''||!Number.isSafeInteger(Number(budget.value))||Number(budget.value)<=0)throw Error('Masukkan budget positif dalam rupiah.')
  if(targetProfit.value===null||targetProfit.value===''||!Number.isSafeInteger(Number(targetProfit.value))||Number(targetProfit.value)<0)throw Error('Masukkan target laba dalam rupiah (minimum 0).')
@@ -40,7 +40,7 @@ function evaluationUrl(){
 }
 async function evaluate(){if(!selected.value)return;await work(async()=>{const url=evaluationUrl();evaluation.value=await props.api(url)})}
 function sendToDecision(){
- if(!evaluation.value)return
+ if(!evaluation.value||!evaluation.value.comparableCount)return
  const l=evaluation.value.listing
  emit('decision',{vehicle:[l.brand,l.model].filter(Boolean).join(' '),year:l.manufacture_year??'',
  kilometer:l.kilometer??'',transmission:l.transmission||'UNKNOWN',stnk:l.stnk_status,bpkb:l.bpkb_status,
@@ -60,7 +60,7 @@ async function setStatus(status){
   evaluation.value=null
  })
 }
-async function addComparable(){if(!selected.value)return;await work(async()=>{await props.api('/hunter/listings/'+selected.value+'/comparables',{method:'POST',body:JSON.stringify({price:Number(compPrice.value),sourceUrl:compUrl.value||null})});compPrice.value=null;compUrl.value='';if(budget.value!==null&&targetProfit.value!==null)evaluation.value=await props.api(evaluationUrl())})}
+async function addComparable(){if(!selected.value)return;await work(async()=>{await props.api('/hunter/listings/'+selected.value+'/comparables',{method:'POST',body:JSON.stringify({price:Number(compPrice.value),sourceUrl:compUrl.value||null})});compPrice.value=null;compUrl.value='';evaluation.value=null})}
 onMounted(()=>work(load))
 </script>
 <template>
@@ -110,7 +110,7 @@ onMounted(()=>work(load))
   <h3>Analisis finansial</h3>
   <div class="hunter-controls"><label>Modal maksimal (Rp)<input type="number" min="1" step="1" required placeholder="Masukkan modal" v-model.number="budget"></label><label>Target profit bersih (Rp)<input type="number" min="0" step="1" required placeholder="Masukkan target laba" v-model.number="targetProfit"></label><label>Estimasi servis (Rp)<input type="number" min="0" step="1" v-model.number="repairCost" placeholder="Isi biaya"></label><label>Pajak dan dokumen (Rp)<input type="number" min="0" step="1" v-model.number="taxCost" placeholder="Isi biaya"></label><label>Transport & iklan (Rp)<input type="number" min="0" step="1" v-model.number="transportCost" placeholder="Isi biaya"></label><label>Cadangan risiko (Rp)<input type="number" min="0" step="1" v-model.number="riskBuffer" placeholder="Isi biaya"></label><label>Target pembeli<select v-model="buyer"><option value="RETAIL">Retail</option><option value="DEALER">Pedagang</option></select></label><button class="secondary" @click="evaluate" :disabled="busy">Hitung ulang</button></div>
   <div v-if="evaluation">
-   <h3>Keputusan: {{evaluation.decision}}</h3><button class="primary" type="button" @click="sendToDecision">Lanjut ke Keputusan Beli</button>
+   <h3>Keputusan: {{evaluation.decision}}</h3><button class="primary" type="button" :disabled="!evaluation.comparableCount||busy" @click="sendToDecision">Lanjut ke Keputusan Beli</button>
    <div class="hunter-stats"><div><small>Harga jual cepat (estimasi)</small><b>{{idr(evaluation.quickSaleEstimate)}}</b></div><div><small>Batas beli maksimal</small><b>{{idr(evaluation.maxBuyPrice)}}</b></div><div><small>Profit di harga iklan</small><b>{{idr(evaluation.estimatedProfitAtAsk)}}</b></div><div><small>Jumlah pembanding</small><b>{{evaluation.comparableCount}}</b></div></div>
    <p v-for="reason in evaluation.reasons" :key="reason">• {{reason}}</p>
    <a v-if="evaluation.listing.source_url" :href="evaluation.listing.source_url" target="_blank" rel="noopener noreferrer">Buka iklan asli ↗</a>
