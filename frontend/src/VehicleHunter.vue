@@ -4,7 +4,7 @@ const props=defineProps({api:{type:Function,required:true}})
 const emit=defineEmits(['decision'])
 const keywordOptions=['BU','Butuh Uang','Butuh dana cepat','Jual cepat','Jual rugi','Pemakaian pribadi','Atas nama pribadi','Milik pribadi','Nama pribadi','Lanjut rawat','Lanjut ngerawatin','Nerusin','Terusin']
 const enabledKeywords=ref([...keywordOptions])
-const keywordOnly=ref(true)
+const keywordOnly=ref(false)
 const keywordQuery=ref('')
 const matchingListings=computed(()=>{
  const q=keywordQuery.value.trim().toLowerCase()
@@ -18,7 +18,7 @@ function searchPhrase(keyword){
  const query=[keyword,keywordQuery.value,'mobil bekas'].filter(Boolean).join(' ')
  window.open('https://www.google.com/search?q='+encodeURIComponent(query),'_blank','noopener,noreferrer')
 }
-const form=ref({source:'FACEBOOK_MANUAL',sourceUrl:'',title:'',brand:'Toyota',model:'',year:2005,askingPrice:45000000,kilometer:null,location:'Jabodetabek',transmission:'MANUAL',stnk:'UNKNOWN',bpkb:'UNKNOWN',notes:''})
+const form=ref({source:'OTHER_MANUAL',sourceUrl:'',title:'',brand:'',model:'',year:null,askingPrice:null,kilometer:null,location:'',transmission:'UNKNOWN',stnk:'UNKNOWN',bpkb:'UNKNOWN',notes:''})
 const budget=ref(null),targetProfit=ref(null),repairCost=ref(null),taxCost=ref(null),transportCost=ref(null),riskBuffer=ref(null),buyer=ref('RETAIL'),list=ref([]),selected=ref(null),evaluation=ref(null),compPrice=ref(null),compUrl=ref(''),error=ref(''),busy=ref(false)
 watch([budget,targetProfit,repairCost,taxCost,transportCost,riskBuffer,buyer],()=>{evaluation.value=null})
 const idr=n=>n==null?'Belum ada data':new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n)
@@ -78,10 +78,10 @@ onMounted(()=>work(load))
     <label>Model<input required v-model="form.model"></label>
     <label>Tahun<input type="number" min="1950" max="2100" v-model.number="form.year"></label>
     <label>Harga penawaran (Rp)<input type="number" min="1" required v-model.number="form.askingPrice"></label>
-    <label>Lokasi<input v-model="form.location"></label>
+    <label>Lokasi<input v-model="form.location" placeholder="Mis. Bekasi"></label><label>Odometer (km)<input type="number" min="0" v-model.number="form.kilometer"></label><label>Transmisi<select v-model="form.transmission"><option value="UNKNOWN">Belum diketahui</option><option value="MANUAL">Manual</option><option value="AUTOMATIC">Otomatis</option></select></label>
     <label>STNK<select v-model="form.stnk"><option>UNKNOWN</option><option>ADA</option><option>TIDAK_ADA</option></select></label>
     <label>BPKB<select v-model="form.bpkb"><option>UNKNOWN</option><option>ADA</option><option>TIDAK_ADA</option></select></label>
-    <button class="primary" type="submit" :disabled="busy">Simpan kandidat</button>
+    <label class="hunter-wide">Deskripsi / catatan iklan<textarea v-model="form.notes" rows="4" placeholder="Tempel deskripsi iklan agar keyword dapat dianalisis"></textarea></label><button class="primary" type="submit" :disabled="busy">Simpan kandidat</button>
    </form>
   </section>
   <section class="panel">
@@ -91,7 +91,7 @@ onMounted(()=>work(load))
     <label><input type="checkbox" v-model="keywordOnly"> Hanya kandidat dengan keyword terpilih</label>
     <input v-model="keywordQuery" placeholder="Filter model, daerah, atau teks listing">
    </div>
-   <p v-if="!list.length">Belum ada listing. Tambahkan kandidat dari sumber yang dapat diperiksa.</p>
+   <p v-if="!list.length">Belum ada listing. Tambahkan kandidat dari sumber yang dapat diperiksa.</p><p v-else-if="!matchingListings.length">Tidak ada listing yang cocok. Coba nonaktifkan filter keyword atau ubah kata pencarian.</p>
    <button class="hunter-result" v-for="item in matchingListings" :key="item.id" @click="choose(item)">
     <b>{{item.brand}} {{item.model}} {{item.manufacture_year}}</b><span>{{idr(item.asking_price)}}</span><small>{{item.source}} · {{item.location}}</small><small v-if="item.matchedKeywords?.length">Keyword: {{item.matchedKeywords.join(", ")}}</small>
    </button>
@@ -120,5 +120,5 @@ onMounted(()=>work(load))
 </section>
 </template>
 <style scoped>
-.hunter-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.hunter-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hunter-form label,.hunter-controls label{display:flex;flex-direction:column;gap:5px;font-size:13px}.hunter-form input,.hunter-form select,.hunter-controls input{width:100%;padding:10px;min-width:0}.hunter-controls{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:18px 0}.hunter-controls label{flex:1;min-width:180px}.hunter-result{display:flex;flex-direction:column;text-align:left;width:100%;padding:12px;margin:9px 0;border:1px solid #7775;border-radius:8px;background:transparent;color:inherit;cursor:pointer}.hunter-result span{font-weight:bold}.hunter-result small{opacity:.7}.hunter-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.hunter-stats>div{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #7775;border-radius:8px}.hunter-stats b{font-size:18px}.hunter-keywords{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.hunter-keywords>b,.hunter-keywords>p,.hunter-keywords>input{width:100%}.hunter-chip{border:1px solid #7776;border-radius:8px;padding:7px;display:flex;align-items:center;gap:6px;font-size:12px}.hunter-chip button{border:0;background:transparent;color:inherit;cursor:pointer}.hunter-keywords>label:not(.hunter-chip){width:100%;font-size:13px}@media(max-width:900px){.hunter-grid,.hunter-stats{grid-template-columns:1fr}.hunter-form{grid-template-columns:1fr}}
+.hunter-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.hunter-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hunter-form label,.hunter-controls label{display:flex;flex-direction:column;gap:5px;font-size:13px}.hunter-form input,.hunter-form select,.hunter-controls input{width:100%;padding:10px;min-width:0}.hunter-controls{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:18px 0}.hunter-controls label{flex:1;min-width:180px}.hunter-result{display:flex;flex-direction:column;text-align:left;width:100%;padding:12px;margin:9px 0;border:1px solid #7775;border-radius:8px;background:transparent;color:inherit;cursor:pointer}.hunter-result span{font-weight:bold}.hunter-result small{opacity:.7}.hunter-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.hunter-stats>div{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #7775;border-radius:8px}.hunter-stats b{font-size:18px}.hunter-keywords{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.hunter-keywords>b,.hunter-keywords>p,.hunter-keywords>input{width:100%}.hunter-chip{border:1px solid #7776;border-radius:8px;padding:7px;display:flex;align-items:center;gap:6px;font-size:12px}.hunter-chip button{border:0;background:transparent;color:inherit;cursor:pointer}.hunter-keywords>label:not(.hunter-chip){width:100%;font-size:13px} .hunter-wide{grid-column:1/-1}.hunter-wide textarea{width:100%;min-height:90px;padding:10px} @media(max-width:900px){.hunter-grid,.hunter-stats{grid-template-columns:1fr}.hunter-form{grid-template-columns:1fr}}
 </style>
