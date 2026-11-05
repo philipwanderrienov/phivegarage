@@ -40,7 +40,7 @@ public class CatalogHouseDiscovery {
  static boolean quotedName(String source,String quote){
   if(quoted(source,quote))return true;
   if(quote==null||quote.trim().length()<2||quote.trim().length()>4)return false;
-  return java.util.regex.Pattern.compile("(?iu)(?<![\\\\p{L}\\\\p{N}])"+java.util.regex.Pattern.quote(quote.trim())+"(?![\\\\p{L}\\\\p{N}])").matcher(source).find();
+  return java.util.regex.Pattern.compile("(?i)(?<![A-Za-z0-9])"+java.util.regex.Pattern.quote(quote.trim())+"(?![A-Za-z0-9])").matcher(source).find();
  }
  static String safeName(String s){
   if(s==null)return null;
