@@ -43,13 +43,54 @@ public class AuctionHouses {
 @RestController
 @RequestMapping("/api/auction-houses")
 class HouseApi {
- final Store store;
- HouseApi(Store store){this.store=store;}
+ final Store store; final Jobs jobs;
+ HouseApi(Store store,Jobs jobs){this.store=store;this.jobs=jobs;}
  static void checkTariff(AuctionHouses.Input input){if(input.active()&&(input.adminFee()==null||input.taxPercent()==null))throw new IllegalArgumentException("Isi tarif admin dan pajak sebelum mengaktifkan balai. Nol hanya jika biaya benar-benar gratis.");}
  @GetMapping Object list(){return store.list("SELECT * FROM auction_houses ORDER BY lower(name)");}
  @PostMapping Object create(@Valid @RequestBody AuctionHouses.Input input){checkTariff(input);UUID id=UUID.randomUUID();store.db.update("INSERT INTO auction_houses(id,name,admin_fee,tax_percent,active) VALUES(?,?,?,?,?)",id,input.name().trim(),input.adminFee(),input.taxPercent(),input.active());return Map.of("id",id);}
  @PutMapping("/{id}") Object update(@PathVariable UUID id,@Valid @RequestBody AuctionHouses.Input input){checkTariff(input);store.one("SELECT id FROM auction_houses WHERE id=?",id);store.db.update("UPDATE auction_houses SET name=?,admin_fee=?,tax_percent=?,active=?,tariff_rule=CASE WHEN admin_fee IS DISTINCT FROM ? OR tax_percent IS DISTINCT FROM ? THEN NULL ELSE tariff_rule END,updated_at=now() WHERE id=?",input.name().trim(),input.adminFee(),input.taxPercent(),input.active(),input.adminFee(),input.taxPercent(),id);return Map.of("saved",true);}
- @DeleteMapping("/{id}") Object delete(@PathVariable UUID id){store.one("SELECT id FROM auction_houses WHERE id=?",id);
-  try{store.db.update("DELETE FROM auction_houses WHERE id=?",id);}catch(org.springframework.dao.DataIntegrityViolationException e){throw new ResponseStatusException(HttpStatus.CONFLICT,"Balai sudah dipakai katalog, keputusan beli, atau unit dimenangkan. Nonaktifkan balai agar histori tetap tersedia.");}return Map.of("deleted",true);
+ public record DeletePreview(String name,long catalogs,long lots,long analyses,long decisions,long wonUnits){}
+ @GetMapping("/{id}/delete-preview") Object deletePreview(@PathVariable UUID id){
+  var house=store.one("SELECT name FROM auction_houses WHERE id=?",id);
+  return preview(id,house.get("name").toString());
+ }
+ DeletePreview preview(UUID id,String name){
+  Long catalogs=store.db.queryForObject("SELECT count(*) FROM catalogs WHERE auction_house_id=?",Long.class,id);
+  Long lots=store.db.queryForObject("SELECT count(*) FROM lots l JOIN catalogs c ON c.id=l.catalog_id WHERE c.auction_house_id=?",Long.class,id);
+  Long analyses=store.db.queryForObject("SELECT count(*) FROM analyses a JOIN catalogs c ON c.id=a.catalog_id WHERE c.auction_house_id=?",Long.class,id);
+  Long decisions=store.db.queryForObject("SELECT count(*) FROM purchase_decisions WHERE auction_house_id=?",Long.class,id);
+  Long won=store.db.queryForObject("SELECT count(*) FROM won_units WHERE auction_house_id=?",Long.class,id);
+  return new DeletePreview(name,catalogs,lots,analyses,decisions,won);
+ }
+ @DeleteMapping("/{id}") Object delete(@PathVariable UUID id){
+  var pdfPaths=new ArrayList<java.nio.file.Path>();
+  var report=jobs.tx.execute(status->{
+   var house=store.one("SELECT name FROM auction_houses WHERE id=? FOR UPDATE",id);
+   String name=house.get("name").toString();
+   var impact=preview(id,name);
+   var sourceFiles=store.list("SELECT file_path FROM catalogs WHERE auction_house_id=? FOR UPDATE",id);
+   for(var file:sourceFiles)pdfPaths.add(jobs.storage.resolve(file.get("file_path").toString()).normalize());
+   // A catalog is derived data and can be removed; accounting is not.
+   // Keep actual acquired units and expense history with their immutable fee snapshots.
+   // The source lot / decision references must be detached before cascade deleting lots.
+   store.db.update("UPDATE won_units SET source_lot_id=NULL WHERE source_lot_id IN (SELECT l.id FROM lots l JOIN catalogs c ON c.id=l.catalog_id WHERE c.auction_house_id=?)",id);
+   store.db.update("UPDATE purchase_decisions SET source_lot_id=NULL WHERE source_lot_id IN (SELECT l.id FROM lots l JOIN catalogs c ON c.id=l.catalog_id WHERE c.auction_house_id=?)",id);
+   store.db.update("UPDATE won_units SET auction_house_id=NULL WHERE auction_house_id=?",id);
+   store.db.update("UPDATE purchase_decisions SET auction_house_id=NULL WHERE auction_house_id=?",id);
+   store.db.update("DELETE FROM catalogs WHERE auction_house_id=?",id);
+   store.db.update("DELETE FROM auction_houses WHERE id=?",id);
+   return impact;
+  });
+  // Files are removed only after a successful database commit.
+  int removedFiles=0;
+  for(var path:pdfPaths)try{
+   if(path.startsWith(jobs.storage)&&java.nio.file.Files.deleteIfExists(path))removedFiles++;
+  }catch(java.io.IOException ex){
+   // Keep the API successful; orphaned files can be cleaned later.
+  }
+  return Map.of("deleted",true,"name",report.name(),"catalogsDeleted",report.catalogs(),
+   "lotsDeleted",report.lots(),"analysesDeleted",report.analyses(),
+   "decisionsPreserved",report.decisions(),"wonUnitsPreserved",report.wonUnits(),
+   "pdfFilesDeleted",removedFiles);
  }
 }
