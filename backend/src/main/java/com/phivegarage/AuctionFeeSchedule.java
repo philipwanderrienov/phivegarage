@@ -18,11 +18,28 @@ public final class AuctionFeeSchedule {
    case "OTOMAS_2026" -> {if(bid>600_000_000L)throw new IllegalArgumentException("Tarif Otomas di atas Rp600 juta belum tersedia");admin=bid<=400_000_000L?3_500_000L:5_500_000L;}
    case "SMARTBID_2026" -> admin=bid<=350_000_000L?3_500_000L:percent(bid,new BigDecimal("1"));
    case "CUSTOM_TIERS" -> admin=customAdmin(bid,snapshot.path("tiers"));
+   case "STEP_TIERS" -> admin=stepTierAdmin(bid,snapshot);
    default -> throw new IllegalArgumentException("Aturan tarif lelang belum dikenal: "+rule);
   }
   long tax=percent(bid,snapshot.path("taxPercent").decimalValue());
   long total=Math.addExact(admin,tax);
   return new Cost(admin,tax,total,Math.addExact(bid,total));
+ }
+ static long stepTierAdmin(long bid,JsonNode snapshot){
+  JsonNode tiers=snapshot.path("tiers");
+  if(!tiers.isArray()||tiers.isEmpty())throw new IllegalArgumentException("Tarif bertingkat tidak lengkap");
+  long lastLimit=0,lastAdmin=0;
+  for(JsonNode tier:tiers){
+   if(!tier.path("upToBid").isIntegralNumber()||!tier.path("adminFee").isIntegralNumber())throw new IllegalArgumentException("Batas tarif tidak valid");
+   long limit=tier.path("upToBid").asLong(),value=tier.path("adminFee").asLong();
+   if(limit<=lastLimit||value<lastAdmin)throw new IllegalArgumentException("Tarif bertingkat tidak berurutan");
+   if(bid<=limit)return value;
+   lastLimit=limit;lastAdmin=value;
+  }
+  long increment=snapshot.path("stepSize").asLong(),additional=snapshot.path("stepAdminIncrease").asLong();
+  if(increment<=0||additional<0)throw new IllegalArgumentException("Kenaikan tarif tidak valid");
+  long steps=Math.floorDiv(bid-lastLimit-1,increment)+1;
+  return Math.addExact(lastAdmin,Math.multiplyExact(steps,additional));
  }
  static long customAdmin(long bid,JsonNode tiers){
   if(!tiers.isArray()||tiers.isEmpty())throw new IllegalArgumentException("Tier admin tidak valid");
