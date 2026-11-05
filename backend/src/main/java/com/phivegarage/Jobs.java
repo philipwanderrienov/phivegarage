@@ -17,9 +17,11 @@ import static com.phivegarage.Models.*;
 public class Jobs {
  final Store store; final AiClient ai; final ObjectMapper json; final Path storage; final TransactionTemplate tx; final CatalogHouseDiscovery discovery;
  final ThreadPoolExecutor executor=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(10),new ThreadPoolExecutor.AbortPolicy());
+ @org.springframework.beans.factory.annotation.Autowired
  public Jobs(Store store,AiClient ai,ObjectMapper json,TransactionTemplate tx,CatalogHouseDiscovery discovery,@Value("${app.storage}") String storage)throws IOException{
   this.store=store;this.ai=ai;this.json=json;this.tx=tx;this.discovery=discovery;this.storage=Path.of(storage).toAbsolutePath();Files.createDirectories(this.storage);
  }
+ public Jobs(Store store,AiClient ai,ObjectMapper json,TransactionTemplate tx,String storage)throws IOException{this(store,ai,json,tx,null,storage);}
  @EventListener(ApplicationReadyEvent.class) public void recover(){
   store.db.update("UPDATE catalogs SET status='FAILED',error='Proses terhenti saat server restart; coba ulang ekstraksi katalog.' WHERE status IN ('QUEUED','EXTRACTING')");
   store.db.update("UPDATE analyses SET status='FAILED',error='Proses terhenti saat server restart; analisis ulang.' WHERE status IN ('QUEUED','PROCESSING')");
