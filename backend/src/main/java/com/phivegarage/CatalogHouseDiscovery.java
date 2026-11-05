@@ -73,6 +73,16 @@ public class CatalogHouseDiscovery {
   if(!n.hasNonNull("taxPercent")||!n.path("taxPercent").isNumber())return null;
   BigDecimal tax=n.path("taxPercent").decimalValue();
   if(tax.signum()<0||tax.compareTo(new BigDecimal("100"))>0)return null;
+  // PDF text may list PPN for individual vehicles. Never turn those notices
+  // into a global mandatory tax even when an LLM labels it GENERAL.
+  String lower=text.toLowerCase(Locale.ROOT);
+  if(tax.signum()>0&&(lower.contains("khusus unit tertentu")||
+     lower.contains("lot ini akan dikenakan")||
+     lower.contains("unit dikenakan biaya ppn")||
+     lower.contains("ada biaya tambahan sebesar 1,1%"))){
+   String evidence=n.path("taxEvidence").asText("").toLowerCase(Locale.ROOT);
+   if(!evidence.contains("semua lot")&&!evidence.contains("semua unit")&&!evidence.contains("setiap unit"))return null;
+  }
   String model=n.path("pricingModel").asText("");
   var fee=new LinkedHashMap<String,Object>();
   fee.put("taxPercent",tax);fee.put("taxBasis","BID");
