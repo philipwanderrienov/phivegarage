@@ -14,7 +14,7 @@ class CatalogHouseDiscoveryTest {
   String source="JBA Katalog lelang biaya admin Rp 3.000.000 dan pajak lelang 1,1% dari harga ketok";
   var data=example("""
    {"houseName":"JBA","nameEvidence":"JBA","pricingModel":"FIXED","feeScope":"GENERAL",
-    "nameEvidence":"JBA","adminEvidence":"biaya admin Rp 3.000.000",
+    "adminEvidence":"biaya admin Rp 3.000.000",
     "taxEvidence":"pajak lelang 1,1% dari harga ketok",
     "adminFee":3000000,"taxPercent":1.1,"notes":null,"tiers":[]}
    """);
