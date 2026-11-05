@@ -137,7 +137,7 @@ public class CatalogHouseDiscovery {
   try(var excerpt=new PDDocument();var out=new ByteArrayOutputStream()){
    for(int page:indices){
     excerpt.importPage(doc.getPage(page));
-    text.append("\\n").append(texts.get(page));
+    text.append("\n").append(texts.get(page));
    }
    excerpt.save(out);
    return new Sample(out.toByteArray(),text.toString().substring(0,Math.min(text.length(),75000)));
