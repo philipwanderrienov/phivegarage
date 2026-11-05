@@ -36,7 +36,7 @@ public class AuctionHouses {
 class HouseApi {
  final Store store;
  HouseApi(Store store){this.store=store;}
- static void checkTariff(AuctionHouses.Input input){if(input.active()&&(input.adminFee()==null||input.taxPercent()==null))throw new IllegalArgumentException("Isi tarif admin dan pajak sebelum mengaktifkan balai. Nol hanya jika biaya benar-benar gratis.");}
+ static void checkTariff(AuctionHouses.Input input){if(input.active()&&(input.adminFee()==null||input.taxPercent()==null))throw new IllegalArgumentException("Isi tarif admin dan pajak sebelum mengaktifkan balai. Nol hanya jika biaya benar-benar gratis.");if(input.active()&&Set.of("carsome","otomas","smartbid").contains(input.name().trim().toLowerCase(java.util.Locale.ROOT)))throw new IllegalArgumentException("Balai ini menggunakan tarif admin bertingkat; aktivasi ditunda sampai kalkulator tarif bertingkat tersedia.");}
  @GetMapping Object list(){return store.list("SELECT * FROM auction_houses ORDER BY lower(name)");}
  @PostMapping Object create(@Valid @RequestBody AuctionHouses.Input input){checkTariff(input);UUID id=UUID.randomUUID();store.db.update("INSERT INTO auction_houses(id,name,admin_fee,tax_percent,active) VALUES(?,?,?,?,?)",id,input.name().trim(),input.adminFee(),input.taxPercent(),input.active());return Map.of("id",id);}
  @PutMapping("/{id}") Object update(@PathVariable UUID id,@Valid @RequestBody AuctionHouses.Input input){checkTariff(input);store.one("SELECT id FROM auction_houses WHERE id=?",id);store.db.update("UPDATE auction_houses SET name=?,admin_fee=?,tax_percent=?,active=?,updated_at=now() WHERE id=?",input.name().trim(),input.adminFee(),input.taxPercent(),input.active(),id);return Map.of("saved",true);}
