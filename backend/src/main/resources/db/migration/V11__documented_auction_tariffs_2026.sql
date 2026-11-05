@@ -2,6 +2,15 @@
 -- Tax 1.1% for Tribik, SmartBID and Caready is a conservative maximum:
 -- apply only to lots explicitly marked. Automatic analysis may overreserve it.
 -- Do not overwrite existing catalog / acquisition fee snapshots.
+-- Recreate only the four houses explicitly requested from attached PDFs if their
+-- old master was deleted. Never create duplicate case-insensitive names.
+INSERT INTO auction_houses(id,name,admin_fee,tax_percent,active)
+VALUES
+ ('22222222-2222-4222-8222-222222222225','Tribik',NULL,NULL,false),
+ ('22222222-2222-4222-8222-222222222224','Smartbid',NULL,NULL,false),
+ ('22222222-2222-4222-8222-222222222223','Otomas',NULL,NULL,false),
+ ('22222222-2222-4222-8222-222222222228','Caready',NULL,NULL,false)
+ON CONFLICT DO NOTHING;
 -- Tribik: DAFTAR LOT 3 NOVEMBER 2026 (EVENT JAKARTA) FINAL, p.1.
 UPDATE auction_houses SET
  admin_fee=3000000,tax_percent=1.1,active=true,
