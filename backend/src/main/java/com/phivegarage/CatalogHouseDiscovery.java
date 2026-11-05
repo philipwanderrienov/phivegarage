@@ -174,9 +174,8 @@ public class CatalogHouseDiscovery {
      // Do not replace existing master rates silently. For a new/inactive house,
      // auto-activate only when fixed values and excerpts are text-verifiable.
      if(fees!=null&&(house==null||!Boolean.TRUE.equals(house.get("active")))){
-      boolean custom="CUSTOM_TIERS".equals(fees.get("feeRule"));
       store.db.update("UPDATE auction_houses SET admin_fee=?,tax_percent=?,active=?,tariff_rule=?::jsonb,tariff_notes=?,updated_at=now() WHERE id=?",
-       fees.get("adminFee"),fees.get("taxPercent"),true,custom?store.encode(fees):null,
+       fees.get("adminFee"),fees.get("taxPercent"),true,store.encode(fees),
        "Terdeteksi dari PDF katalog "+fileName+"; periksa kembali tarif per lot dan tanggal katalog.",houseId);
      }
      Map<String,Object> snapshot=null;
