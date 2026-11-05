@@ -23,6 +23,7 @@ public class AuctionHouses {
   var fee=new LinkedHashMap<String,Object>();
   fee.put("name",name);fee.put("adminFee",h.get("admin_fee")==null?0:h.get("admin_fee"));
   fee.put("taxPercent",h.get("tax_percent"));fee.put("taxBasis","BID");fee.put("feeRule",rule);
+  if(h.get("tariff_rule")!=null){var custom=(JsonNode)h.get("tariff_rule");if("CUSTOM_TIERS".equals(custom.path("feeRule").asText())){fee.put("feeRule","CUSTOM_TIERS");fee.put("tiers",store.json.convertValue(custom.path("tiers"),List.class));}}
   return fee;
  }
  static String feeRule(String name){return switch(name.trim().toLowerCase(java.util.Locale.ROOT)){
