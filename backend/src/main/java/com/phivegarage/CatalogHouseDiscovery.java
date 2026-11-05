@@ -171,9 +171,10 @@ public class CatalogHouseDiscovery {
       houseId=UUID.randomUUID();
       store.db.update("INSERT INTO auction_houses(id,name,admin_fee,tax_percent,active,tariff_notes,tariff_rule) VALUES(?,?,NULL,NULL,false,?,NULL)",houseId,discovered,"Ditemukan otomatis dari katalog; tarif memerlukan bukti dan verifikasi");
      }else houseId=(UUID)house.get("id");
-     // Do not replace existing master rates silently. For a new/inactive house,
-     // auto-activate only when fixed values and excerpts are text-verifiable.
-     if(fees!=null&&(house==null||!Boolean.TRUE.equals(house.get("active")))){
+     // A GENERAL tariff backed by matching PDF excerpts becomes the latest
+     // master tariff, even for a known house. Prior catalog/unit snapshots
+     // remain immutable. PROMO/LOT/ambiguous terms never update master.
+     if(fees!=null){
       store.db.update("UPDATE auction_houses SET admin_fee=?,tax_percent=?,active=?,tariff_rule=?::jsonb,tariff_notes=?,updated_at=now() WHERE id=?",
        fees.get("adminFee"),fees.get("taxPercent"),true,store.encode(fees),
        "Terdeteksi dari PDF katalog "+fileName+"; periksa kembali tarif per lot dan tanggal katalog.",houseId);
