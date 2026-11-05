@@ -72,6 +72,15 @@ public final class AuctionFeeSchedule {
  public static Map<String,Object> preview(long bid,JsonNode fee){
   if(fee==null||fee.isNull())return Map.of("available",false);
   var c=cost(bid,fee);
-  return Map.of("available",true,"bid",bid,"adminFee",c.adminFee(),"taxPercent",fee.path("taxPercent").decimalValue(),"auctionTax",c.auctionTax(),"auctionAllIn",c.auctionAllIn(),"feeRule",fee.path("feeRule").asText("FIXED"));
+  var summary=new LinkedHashMap<String,Object>();
+  summary.put("available",true);summary.put("bid",bid);
+  summary.put("adminFee",c.adminFee());summary.put("taxPercent",fee.path("taxPercent").decimalValue());
+  summary.put("auctionTax",c.auctionTax());summary.put("auctionAllIn",c.auctionAllIn());
+  summary.put("feeRule",fee.path("feeRule").asText("FIXED"));
+  String policy=fee.path("taxPolicy").asText("GENERAL");
+  summary.put("taxPolicy",policy);
+  summary.put("taxIsConservativeReserve","CONDITIONAL_MAX".equals(policy));
+  if("CONDITIONAL_MAX".equals(policy))summary.put("taxNote","PPN 1,1% hanya untuk lot bertanda; angka ini merupakan buffer batas atas, bukan tagihan pasti.");
+  return summary;
  }
 }
