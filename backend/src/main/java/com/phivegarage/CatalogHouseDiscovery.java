@@ -183,9 +183,7 @@ public class CatalogHouseDiscovery {
      if(fees!=null){
       snapshot=new LinkedHashMap<>(fees);
       snapshot.put("name",house==null?discovered:house.get("name"));
-     }else if(house!=null&&Boolean.TRUE.equals(house.get("active"))
-        &&valid.path("adminEvidence").asText("").isBlank()
-        &&valid.path("taxEvidence").asText("").isBlank()){
+     }else if(house!=null&&Boolean.TRUE.equals(house.get("active"))){
       // No new fee printed: reuse verified active master WITHOUT inventing a zero tariff.
       snapshot=new LinkedHashMap<>();
       snapshot.put("name",house.get("name"));snapshot.put("taxBasis","BID");
@@ -204,7 +202,7 @@ public class CatalogHouseDiscovery {
     var finding=new LinkedHashMap<String,Object>();
     finding.put("status",fees==null&&usableStateFromCatalog(catalogId)?"REUSED":state);finding.put("source","PDF");finding.put("data",detection);
     boolean usable=store.one("SELECT fee_snapshot FROM catalogs WHERE id=?",catalogId).get("fee_snapshot")!=null;
-    finding.put("ratesUsable",usable);finding.put("reason",fees!=null?"Tarif didukung kutipan teks katalog.":usable?"Memakai tarif master aktif karena PDF tidak mencantumkan tarif baru.":"Identitas/tarif belum lengkap atau kutipan belum cocok dengan teks PDF; tidak dihitung sebagai tarif nol.");
+    finding.put("ratesUsable",usable);finding.put("reason",fees!=null?"Tarif didukung kutipan teks katalog.":usable?"Memakai tarif master aktif sebagai estimasi; tarif PDF tidak lengkap atau bersifat per-lot. Periksa perbedaan tarif sebelum bidding.":"Identitas/tarif belum lengkap atau kutipan belum cocok dengan teks PDF; tidak dihitung sebagai tarif nol.");
     store.db.update("UPDATE catalogs SET house_detection=?::jsonb WHERE id=?",store.encode(finding),catalogId);
     return houseId;
    });
