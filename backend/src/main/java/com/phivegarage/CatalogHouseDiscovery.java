@@ -113,20 +113,39 @@ public class CatalogHouseDiscovery {
  record Sample(byte[] pdf,String text){}
  static Sample sample(PDDocument doc)throws Exception{
   int pages=doc.getNumberOfPages();
-  List<Integer> selected=new ArrayList<>();
-  for(int i=0;i<Math.min(3,pages);i++)selected.add(i);
-  for(int i=Math.max(3,pages-2);i<pages;i++)selected.add(i);
-  StringBuilder text=new StringBuilder();
   PDFTextStripper stripper=new PDFTextStripper();
+  var texts=new ArrayList<String>();
+  var ranked=new ArrayList<Integer>();
+  for(int i=0;i<pages;i++){
+   stripper.setStartPage(i+1);stripper.setEndPage(i+1);
+   String t=stripper.getText(doc);
+   texts.add(t.substring(0,Math.min(t.length(),16000)));
+   ranked.add(i);
+  }
+  ranked.sort((a,b)->{
+   int difference=Integer.compare(feeScore(texts.get(b)),feeScore(texts.get(a)));
+   return difference==0?Integer.compare(a,b):difference;
+  });
+  var indices=new TreeSet<Integer>();
+  for(int i=0;i<Math.min(2,pages);i++)indices.add(i);
+  for(int i=Math.max(2,pages-2);i<pages;i++)indices.add(i);
+  for(int i:ranked){if(indices.size()>=7)break;if(feeScore(texts.get(i))>0)indices.add(i);}
+  StringBuilder text=new StringBuilder();
   try(var excerpt=new PDDocument();var out=new ByteArrayOutputStream()){
-   for(int p:selected){
-    excerpt.importPage(doc.getPage(p));
-    stripper.setStartPage(p+1);stripper.setEndPage(p+1);
-    text.append("\n").append(stripper.getText(doc));
+   for(int page:indices){
+    excerpt.importPage(doc.getPage(page));
+    text.append("\\n").append(texts.get(page));
    }
    excerpt.save(out);
    return new Sample(out.toByteArray(),text.toString().substring(0,Math.min(text.length(),75000)));
   }
+ }
+ static int feeScore(String text){
+  String t=text.toLowerCase(Locale.ROOT);
+  int score=0;
+  for(String word:List.of("biaya admin","administrasi lelang","biaya lelang","pajak lelang","handling fee","biaya penanganan","auction fee","ppn"))if(t.contains(word))score+=3;
+  for(String word:List.of("tarif","harga ketok","harga terbentuk","harga menang","pungutan"))if(t.contains(word))score++;
+  return score;
  }
  /** Detection failure is recorded but cannot prevent the vehicle PDF extraction. */
  void discover(UUID catalogId,PDDocument doc,String fileName){
