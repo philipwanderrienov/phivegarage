@@ -28,7 +28,7 @@ public class CatalogHouseDiscovery {
   if(k.contains("carsome"))return "carsome";
   if(k.contains("smartbid"))return "smartbid";
   if(k.contains("otomas"))return "otomas";
-  if(k.contains("carready"))return "carready";
+  if(k.contains("carready")||k.contains("caready"))return "caready";
   if(k.contains("tribik"))return "tribik";
   if(k.contains("tribid"))return "tribid";
   if(k.equals("jba")||k.endsWith("jba")||k.startsWith("jba"))return "jba";
