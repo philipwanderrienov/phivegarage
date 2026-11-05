@@ -26,7 +26,7 @@ UPDATE auction_houses SET
 WHERE lower(name)='otomas';
 -- Caready: Katalog BEKASI-CAR-2611040735 SEMENTARA, p.9.
 UPDATE auction_houses SET
- name='Caready',admin_fee=3000000,tax_percent=1.1,active=true,
+ admin_fee=3000000,tax_percent=1.1,active=true,
  tariff_rule='{"feeRule":"STEP_TIERS","taxPolicy":"CONDITIONAL_MAX","tiers":[{"upToBid":400000000,"adminFee":3000000},{"upToBid":600000000,"adminFee":5000000},{"upToBid":800000000,"adminFee":8000000},{"upToBid":1000000000,"adminFee":10000000},{"upToBid":1200000000,"adminFee":12000000}],"stepSize":200000000,"stepAdminIncrease":2000000}'::jsonb,
  tariff_notes='TERVERIFIKASI DARI PDF Caready Bekasi 4 Nov 2026 hlm 9: admin mobil <=400jt 3jt; >400-600jt 5jt; >600-800jt 8jt; >800jt-1M 10jt; >1M-1,2M 12jt; tiap 200jt selanjutnya +2jt. PPN tambahan 1,1% HANYA LOT BERTANDA; kalkulasi umum mengalokasikan buffer konservatif. Deposit mobil 5jt/unit (dikembalikan jika tidak menang). Pelunasan 4 hari kerja. Ambil unit <=7 hari, lewatnya dikenakan denda yang nominalnya tidak tercantum. Beberapa lot dikenakan mobilisasi 777rb, 388.500, 555rb dan biaya dokumen lain. Patuhi keterangan per lot dan daftar final.',
  updated_at=now()
