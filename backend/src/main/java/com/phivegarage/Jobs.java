@@ -15,10 +15,10 @@ import jakarta.annotation.PreDestroy;
 import static com.phivegarage.Models.*;
 @Service
 public class Jobs {
- final Store store; final AiClient ai; final ObjectMapper json; final Path storage; final TransactionTemplate tx;
+ final Store store; final AiClient ai; final ObjectMapper json; final Path storage; final TransactionTemplate tx; final CatalogHouseDiscovery discovery;
  final ThreadPoolExecutor executor=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(10),new ThreadPoolExecutor.AbortPolicy());
- public Jobs(Store store,AiClient ai,ObjectMapper json,TransactionTemplate tx,@Value("${app.storage}") String storage)throws IOException{
-  this.store=store;this.ai=ai;this.json=json;this.tx=tx;this.storage=Path.of(storage).toAbsolutePath();Files.createDirectories(this.storage);
+ public Jobs(Store store,AiClient ai,ObjectMapper json,TransactionTemplate tx,CatalogHouseDiscovery discovery,@Value("${app.storage}") String storage)throws IOException{
+  this.store=store;this.ai=ai;this.json=json;this.tx=tx;this.discovery=discovery;this.storage=Path.of(storage).toAbsolutePath();Files.createDirectories(this.storage);
  }
  @EventListener(ApplicationReadyEvent.class) public void recover(){
   store.db.update("UPDATE catalogs SET status='FAILED',error='Proses terhenti saat server restart; coba ulang ekstraksi katalog.' WHERE status IN ('QUEUED','EXTRACTING')");
@@ -32,6 +32,9 @@ public class Jobs {
    store.db.update("UPDATE catalogs SET status='EXTRACTING' WHERE id=?",id);
    try(var doc=Loader.loadPDF(storage.resolve(catalog.get("file_path").toString()).toFile())){
     int pages=doc.getNumberOfPages();store.db.update("UPDATE catalogs SET pages=? WHERE id=?",pages,id);
+    // A missing house selection triggers PDF-based discovery; the explicit manual
+    // selection is respected and is not silently replaced by an AI prediction.
+    if(catalog.get("auction_house_id")==null)discovery.discover(id,doc,catalog.get("name").toString());
     var lots=new LinkedHashMap<String,LotData>();
     for(int start=0;start<pages;start+=3){
      try(var chunk=new PDDocument();var out=new ByteArrayOutputStream()){
