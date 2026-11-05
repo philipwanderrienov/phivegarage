@@ -34,7 +34,7 @@ public class AiClient {
   var f=new LinkedHashMap<String,Object>();
   for(String s:List.of("lotNumber","vehicle"))f.put(s,field("string",false));
   for(String s:List.of("transmission","stnk","bpkb","taxExpiry","notes","sourceQuote"))f.put(s,field("string",true));
-  for(String s:List.of("year","kilometer","basePrice","sourcePage"))f.put(s,field("integer",true));
+  for(String s:List.of("year","kilometer","basePrice","sourcePage","otherCost"))f.put(s,field("integer",true));
   return object(Map.of("lots",array(object(f))));
  }
  static Map<String,Object> analysisSchema(){
