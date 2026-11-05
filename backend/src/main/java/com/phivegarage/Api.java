@@ -16,15 +16,15 @@ public class Api {
  public Api(Store store,Jobs jobs,AiClient ai,AuctionHouses houses){this.store=store;this.jobs=jobs;this.ai=ai;this.houses=houses;}
  @GetMapping("/health") public Map<String,String> health(){return Map.of("status","UP");}
  @GetMapping("/config") public Map<String,Object> config(){return Map.of("aiConfigured",ai.enabled(),"model",ai.model());}
- @GetMapping("/catalogs") public Object catalogs(){return store.list("SELECT c.id,c.name,c.house,c.status,c.progress,c.pages,c.error,c.created_at,c.auction_house_id,c.fee_snapshot,count(l.id) AS total_lots FROM catalogs c LEFT JOIN lots l ON l.catalog_id=c.id GROUP BY c.id ORDER BY c.created_at DESC");}
- @PostMapping("/catalogs") public Object upload(@RequestPart MultipartFile file,@RequestParam UUID houseId)throws Exception{
+ @GetMapping("/catalogs") public Object catalogs(){return store.list("SELECT c.id,c.name,c.house,c.status,c.progress,c.pages,c.error,c.created_at,c.auction_house_id,c.fee_snapshot,c.house_detection,count(l.id) AS total_lots FROM catalogs c LEFT JOIN lots l ON l.catalog_id=c.id GROUP BY c.id ORDER BY c.created_at DESC");}
+ @PostMapping("/catalogs") public Object upload(@RequestPart MultipartFile file,@RequestParam(required=false) UUID houseId)throws Exception{
   if(!ai.enabled())throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"OPENAI_API_KEY belum dikonfigurasi");
   if(file.isEmpty()||file.getSize()>20*1024*1024)throw new IllegalArgumentException("PDF maksimal 20 MB");
   byte[] bytes=file.getBytes();PdfFiles.validate(bytes);
-  var fee=houses.snapshot(houseId);
+  Map<String,Object> fee=houseId==null?null:houses.snapshot(houseId);
   UUID id=UUID.randomUUID();String path=id+".pdf";Files.write(jobs.storage.resolve(path),bytes);
   String name=Optional.ofNullable(file.getOriginalFilename()).orElse("catalog.pdf");
-  store.db.update("INSERT INTO catalogs(id,name,house,file_path,status,auction_house_id,fee_snapshot) VALUES(?,?,?,?,'QUEUED',?,?::jsonb)",id,name,fee.get("name"),path,houseId,store.encode(fee));
+  store.db.update("INSERT INTO catalogs(id,name,house,file_path,status,auction_house_id,fee_snapshot) VALUES(?,?,?,?,'QUEUED',?,?::jsonb)",id,name,fee==null?"Menunggu deteksi PDF":fee.get("name"),path,houseId,fee==null?null:store.encode(fee));
   try{jobs.submit(()->jobs.extract(id));}catch(Exception e){store.db.update("DELETE FROM catalogs WHERE id=?",id);Files.deleteIfExists(jobs.storage.resolve(path));throw e;}
   return Map.of("id",id);
  }
@@ -37,7 +37,7 @@ public class Api {
   try{jobs.submit(()->jobs.extract(id));}catch(Exception e){store.db.update("UPDATE catalogs SET status='FAILED',error='Antrean penuh; coba kembali nanti.' WHERE id=?",id);throw e;}
   return Map.of("id",id);
  }
- @GetMapping("/catalogs/{id}") public Object catalog(@PathVariable UUID id){return store.one("SELECT id,name,house,status,progress,pages,error,created_at,auction_house_id,fee_snapshot FROM catalogs WHERE id=?",id);}
+ @GetMapping("/catalogs/{id}") public Object catalog(@PathVariable UUID id){return store.one("SELECT id,name,house,status,progress,pages,error,created_at,auction_house_id,fee_snapshot,house_detection FROM catalogs WHERE id=?",id);}
  @GetMapping("/catalogs/{id}/pdf") public ResponseEntity<FileSystemResource> pdf(@PathVariable UUID id){var c=store.one("SELECT file_path FROM catalogs WHERE id=?",id);return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).header("Content-Disposition","inline; filename=catalog.pdf").body(new FileSystemResource(jobs.storage.resolve(c.get("file_path").toString())));}
  @GetMapping("/catalogs/{id}/lots") public Object lots(@PathVariable UUID id){var c=store.one("SELECT fee_snapshot FROM catalogs WHERE id=?",id);var rows=store.list("SELECT * FROM lots WHERE catalog_id=? ORDER BY lot_number",id);
   for(var row:rows){var data=(com.fasterxml.jackson.databind.JsonNode)row.get("data");var price=data.path("basePrice");row.put("auctionCost",price.isIntegralNumber()?AuctionHouses.cost(price.asLong(),(com.fasterxml.jackson.databind.JsonNode)c.get("fee_snapshot")):Map.of("available",false));}return rows;
@@ -60,8 +60,9 @@ public class Api {
  @PostMapping("/catalogs/{id}/analyses") public Object analyze(@PathVariable UUID id,@Valid @RequestBody Criteria c){
   var catalog=store.one("SELECT status,fee_snapshot FROM catalogs WHERE id=?",id);if(!"READY".equals(catalog.get("status")))throw new ResponseStatusException(HttpStatus.CONFLICT,"Katalog belum siap");
   if(Math.max(c.capital(),c.maxPerUnit())>100_000_000_000L)throw new IllegalArgumentException("Modal di luar rentang");
+  if(catalog.get("fee_snapshot")==null)throw new ResponseStatusException(HttpStatus.CONFLICT,"Tarif lelang belum terverifikasi. Buka katalog dan pilih balai/tarif terlebih dahulu.");
   var effective=AuctionHouses.withFees(c,(com.fasterxml.jackson.databind.JsonNode)catalog.get("fee_snapshot"));
-  UUID run=UUID.randomUUID();var snapshot=store.list("SELECT id,lot_number,data,verified FROM lots WHERE catalog_id=? ORDER BY lot_number",id);store.db.update("INSERT INTO analyses(id,catalog_id,status,parameters,input_lots) VALUES(?,?,'QUEUED',?::jsonb,?::jsonb)",run,id,store.encode(effective),store.encode(snapshot));
+  UUID run=UUID.randomUUID();var snapshot=store.list("SELECT id,lot_number,data,verified FROM lots WHERE catalog_id=? ORDER BY lot_number",id);store.db.update("INSERT INTO analyses(id,catalog_id,status,parameters,input_lots,fee_snapshot) VALUES(?,?,'QUEUED',?::jsonb,?::jsonb,?::jsonb)",run,id,store.encode(effective),store.encode(snapshot),store.encode(catalog.get("fee_snapshot")));
   try{jobs.submit(()->jobs.analyze(run));}catch(Exception e){store.db.update("DELETE FROM analyses WHERE id=?",run);throw e;}return Map.of("id",run);
  }
  @GetMapping("/catalogs/{id}/analyses") public Object history(@PathVariable UUID id){return store.list("SELECT * FROM analyses WHERE catalog_id=? ORDER BY created_at DESC",id);}

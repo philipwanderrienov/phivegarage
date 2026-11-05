@@ -24,7 +24,7 @@ public class WonApi {
  Map<String,Object> decorate(Map<String,Object> row){
   var d=store.decode(row.get("data").toString(),UnitData.class);var fee=(JsonNode)row.get("fee_snapshot");
   long expense=store.db.queryForObject("SELECT COALESCE(sum(amount),0) FROM unit_expenses WHERE unit_id=?",Long.class,row.get("id"));
-  row.put("summary",WonCalculator.calculate(d.winningBid(),d.idealBid(),fee.path("adminFee").asLong(),fee.path("taxPercent").decimalValue(),expense,d.targetPrice(),d.dealPrice()));return row;
+  row.put("summary",WonCalculator.calculate(d.winningBid(),d.idealBid(),fee.path("adminFee").asLong(),fee.path("taxPercent").decimalValue(),expense,d.targetPrice(),d.dealPrice(),fee));return row;
  }
  @GetMapping Object list(){return store.list("SELECT * FROM won_units ORDER BY created_at DESC").stream().map(this::decorate).toList();}
  @GetMapping("/funds") Object funds(){long start=store.db.queryForObject("SELECT starting_funds FROM garage_settings WHERE id=1",Long.class),profit=0,held=0;
