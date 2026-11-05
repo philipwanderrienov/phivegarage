@@ -93,6 +93,15 @@ public class CatalogHouseDiscovery {
   }
   fee.put("feeRule","CUSTOM_TIERS");fee.put("tiers",rows);
   fee.put("adminFee",0L);
+  // Binary-search max bid requires nondecreasing total acquisition cost.
+  // Disallow discontinuous falling fees at tier transitions.
+  var schedule=new LinkedHashMap<String,Object>(fee);
+  var encoded=new ObjectMapper().valueToTree(schedule);
+  for(int i=0;i<rows.size()-1;i++){
+   long upper=((Number)rows.get(i).get("upToBid")).longValue();
+   if(upper>=100_000_000_000L)return null;
+   if(AuctionFeeSchedule.cost(upper+1,encoded).auctionAllIn()<AuctionFeeSchedule.cost(upper,encoded).auctionAllIn())return null;
+  }
   return fee;
  }
  record Sample(byte[] pdf,String text){}
@@ -143,11 +152,22 @@ public class CatalogHouseDiscovery {
        "Terdeteksi dari PDF katalog "+fileName+"; periksa kembali tarif per lot dan tanggal katalog.",houseId);
      }
      Map<String,Object> snapshot=null;
-     if(fees!=null){snapshot=new LinkedHashMap<>(fees);snapshot.put("name",house==null?discovered:house.get("name"));}
-     else if(house!=null&&Boolean.TRUE.equals(house.get("active"))){
-      // Existing house keeps its known master rates only when the uploaded PDF
-      // does not contain a contradictory explicit rate.
-      snapshot=null; // Pending rates require explicit reconciliation.
+     if(fees!=null){
+      snapshot=new LinkedHashMap<>(fees);
+      snapshot.put("name",house==null?discovered:house.get("name"));
+     }else if(house!=null&&Boolean.TRUE.equals(house.get("active"))
+        &&valid.path("adminEvidence").asText("").isBlank()
+        &&valid.path("taxEvidence").asText("").isBlank()){
+      // No new fee printed: reuse verified active master WITHOUT inventing a zero tariff.
+      snapshot=new LinkedHashMap<>();
+      snapshot.put("name",house.get("name"));snapshot.put("taxBasis","BID");
+      snapshot.put("taxPercent",house.get("tax_percent"));
+      snapshot.put("adminFee",house.get("admin_fee"));
+      if(house.get("tariff_rule")!=null){
+       JsonNode rule=(JsonNode)house.get("tariff_rule");
+       snapshot.put("feeRule",rule.path("feeRule").asText("FIXED"));
+       if(rule.has("tiers"))snapshot.put("tiers",store.json.convertValue(rule.path("tiers"),List.class));
+      }else snapshot.put("feeRule",AuctionHouses.feeRule(house.get("name").toString()));
      }
      if(snapshot!=null)
       store.db.update("UPDATE catalogs SET auction_house_id=?,house=?,fee_snapshot=?::jsonb WHERE id=?",houseId,snapshot.get("name"),store.encode(snapshot),catalogId);
@@ -155,7 +175,8 @@ public class CatalogHouseDiscovery {
     }
     var finding=new LinkedHashMap<String,Object>();
     finding.put("status",state);finding.put("source","PDF");finding.put("data",detection);
-    finding.put("ratesUsable",fees!=null);finding.put("reason",fees==null?"Identitas/tarif belum lengkap atau kutipan belum cocok dengan teks PDF; tidak dihitung sebagai tarif nol.":"Tarif didukung kutipan teks katalog.");
+    boolean usable=store.one("SELECT fee_snapshot FROM catalogs WHERE id=?",catalogId).get("fee_snapshot")!=null;
+    finding.put("ratesUsable",usable);finding.put("reason",fees!=null?"Tarif didukung kutipan teks katalog.":usable?"Memakai tarif master aktif karena PDF tidak mencantumkan tarif baru.":"Identitas/tarif belum lengkap atau kutipan belum cocok dengan teks PDF; tidak dihitung sebagai tarif nol.");
     store.db.update("UPDATE catalogs SET house_detection=?::jsonb WHERE id=?",store.encode(finding),catalogId);
     return houseId;
    });
