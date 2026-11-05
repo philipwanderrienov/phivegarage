@@ -13,10 +13,10 @@ import static com.phivegarage.Models.*;
 public class AuctionHouses {
  final Store store;
  public AuctionHouses(Store store){this.store=store;}
- public record Input(@NotBlank @Size(max=120) String name,@PositiveOrZero @Max(100000000000L) long adminFee,
-  @NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer=3,fraction=4) BigDecimal taxPercent,boolean active) {}
+ public record Input(@NotBlank @Size(max=120) String name,@PositiveOrZero @Max(100000000000L) Long adminFee,
+  @DecimalMin("0") @DecimalMax("100") @Digits(integer=3,fraction=4) BigDecimal taxPercent,boolean active) {}
  Map<String,Object> snapshot(UUID id){var h=store.one("SELECT * FROM auction_houses WHERE id=?",id);
-  if(!Boolean.TRUE.equals(h.get("active")))throw new ResponseStatusException(HttpStatus.CONFLICT,"Balai tidak aktif");
+  if(!Boolean.TRUE.equals(h.get("active"))||h.get("admin_fee")==null||h.get("tax_percent")==null)throw new ResponseStatusException(HttpStatus.CONFLICT,"Balai belum aktif atau tarif admin/pajaknya belum diverifikasi");
   return Map.of("name",h.get("name"),"adminFee",h.get("admin_fee"),"taxPercent",h.get("tax_percent"),"taxBasis","BID");
  }
  static Criteria withFees(Criteria c,JsonNode fee){
@@ -36,9 +36,10 @@ public class AuctionHouses {
 class HouseApi {
  final Store store;
  HouseApi(Store store){this.store=store;}
+ static void checkTariff(AuctionHouses.Input input){if(input.active()&&(input.adminFee()==null||input.taxPercent()==null))throw new IllegalArgumentException("Isi tarif admin dan pajak sebelum mengaktifkan balai. Nol hanya jika biaya benar-benar gratis.");}
  @GetMapping Object list(){return store.list("SELECT * FROM auction_houses ORDER BY lower(name)");}
- @PostMapping Object create(@Valid @RequestBody AuctionHouses.Input input){UUID id=UUID.randomUUID();store.db.update("INSERT INTO auction_houses(id,name,admin_fee,tax_percent,active) VALUES(?,?,?,?,?)",id,input.name().trim(),input.adminFee(),input.taxPercent(),input.active());return Map.of("id",id);}
- @PutMapping("/{id}") Object update(@PathVariable UUID id,@Valid @RequestBody AuctionHouses.Input input){store.one("SELECT id FROM auction_houses WHERE id=?",id);store.db.update("UPDATE auction_houses SET name=?,admin_fee=?,tax_percent=?,active=?,updated_at=now() WHERE id=?",input.name().trim(),input.adminFee(),input.taxPercent(),input.active(),id);return Map.of("saved",true);}
+ @PostMapping Object create(@Valid @RequestBody AuctionHouses.Input input){checkTariff(input);UUID id=UUID.randomUUID();store.db.update("INSERT INTO auction_houses(id,name,admin_fee,tax_percent,active) VALUES(?,?,?,?,?)",id,input.name().trim(),input.adminFee(),input.taxPercent(),input.active());return Map.of("id",id);}
+ @PutMapping("/{id}") Object update(@PathVariable UUID id,@Valid @RequestBody AuctionHouses.Input input){checkTariff(input);store.one("SELECT id FROM auction_houses WHERE id=?",id);store.db.update("UPDATE auction_houses SET name=?,admin_fee=?,tax_percent=?,active=?,updated_at=now() WHERE id=?",input.name().trim(),input.adminFee(),input.taxPercent(),input.active(),id);return Map.of("saved",true);}
  @DeleteMapping("/{id}") Object delete(@PathVariable UUID id){store.one("SELECT id FROM auction_houses WHERE id=?",id);
   try{store.db.update("DELETE FROM auction_houses WHERE id=?",id);}catch(org.springframework.dao.DataIntegrityViolationException e){throw new ResponseStatusException(HttpStatus.CONFLICT,"Balai sudah dipakai katalog, keputusan beli, atau unit dimenangkan. Nonaktifkan balai agar histori tetap tersedia.");}return Map.of("deleted",true);
  }
