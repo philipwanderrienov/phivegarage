@@ -17,11 +17,30 @@ public final class AuctionFeeSchedule {
    case "CARSOME_2026" -> admin=bid<100_000_000L?500_000L:bid<=200_000_000L?750_000L:1_000_000L;
    case "OTOMAS_2026" -> {if(bid>600_000_000L)throw new IllegalArgumentException("Tarif Otomas di atas Rp600 juta belum tersedia");admin=bid<=400_000_000L?3_500_000L:5_500_000L;}
    case "SMARTBID_2026" -> admin=bid<=350_000_000L?3_500_000L:percent(bid,new BigDecimal("1"));
+   case "CUSTOM_TIERS" -> admin=customAdmin(bid,snapshot.path("tiers"));
    default -> throw new IllegalArgumentException("Aturan tarif lelang belum dikenal: "+rule);
   }
   long tax=percent(bid,snapshot.path("taxPercent").decimalValue());
   long total=Math.addExact(admin,tax);
   return new Cost(admin,tax,total,Math.addExact(bid,total));
+ }
+ static long customAdmin(long bid,JsonNode tiers){
+  if(!tiers.isArray()||tiers.isEmpty())throw new IllegalArgumentException("Tier admin tidak valid");
+  long prev=0;
+  for(int i=0;i<tiers.size();i++){
+   var tier=tiers.get(i);
+   long upper=tier.path("upToBid").isNull()?100_000_000_000L:tier.path("upToBid").asLong(-1);
+   if(upper<=prev)throw new IllegalArgumentException("Tier admin tidak berurutan");
+   boolean fixed=tier.path("adminFee").isIntegralNumber(),pct=tier.path("adminPercent").isNumber();
+   if(fixed==pct)throw new IllegalArgumentException("Aturan tier ambigu");
+   if(bid<=upper){
+    long amount=fixed?tier.path("adminFee").asLong():percent(bid,tier.path("adminPercent").decimalValue());
+    if(amount<0)throw new IllegalArgumentException("Biaya admin negatif");
+    return amount;
+   }
+   prev=upper;
+  }
+  throw new IllegalArgumentException("Tidak ada tier berlaku untuk harga bid");
  }
  static long percent(long bid,BigDecimal pct){return BigDecimal.valueOf(bid).multiply(pct).divide(BigDecimal.valueOf(100),0,RoundingMode.CEILING).longValueExact();}
  public static long maxBid(long sale,long target,long extra,long capital,JsonNode fee){
