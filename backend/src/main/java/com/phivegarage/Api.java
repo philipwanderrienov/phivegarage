@@ -61,7 +61,7 @@ public class Api {
   var catalog=store.one("SELECT status,fee_snapshot FROM catalogs WHERE id=?",id);if(!"READY".equals(catalog.get("status")))throw new ResponseStatusException(HttpStatus.CONFLICT,"Katalog belum siap");
   if(Math.max(c.capital(),c.maxPerUnit())>100_000_000_000L)throw new IllegalArgumentException("Modal di luar rentang");
   var effective=AuctionHouses.withFees(c,(com.fasterxml.jackson.databind.JsonNode)catalog.get("fee_snapshot"));
-  UUID run=UUID.randomUUID();var snapshot=store.list("SELECT id,lot_number,data,verified FROM lots WHERE catalog_id=? ORDER BY lot_number",id);store.db.update("INSERT INTO analyses(id,catalog_id,status,parameters,input_lots) VALUES(?,?,'QUEUED',?::jsonb,?::jsonb)",run,id,store.encode(effective),store.encode(snapshot));
+  UUID run=UUID.randomUUID();var snapshot=store.list("SELECT id,lot_number,data,verified FROM lots WHERE catalog_id=? ORDER BY lot_number",id);store.db.update("INSERT INTO analyses(id,catalog_id,status,parameters,input_lots,fee_snapshot) VALUES(?,?,'QUEUED',?::jsonb,?::jsonb,?::jsonb)",run,id,store.encode(effective),store.encode(snapshot),store.encode(catalog.get("fee_snapshot")));
   try{jobs.submit(()->jobs.analyze(run));}catch(Exception e){store.db.update("DELETE FROM analyses WHERE id=?",run);throw e;}return Map.of("id",run);
  }
  @GetMapping("/catalogs/{id}/analyses") public Object history(@PathVariable UUID id){return store.list("SELECT * FROM analyses WHERE catalog_id=? ORDER BY created_at DESC",id);}
